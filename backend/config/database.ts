@@ -41,9 +41,9 @@ const dbConfig = defineConfig({
       connection: {
         host: env.get('DB_HOST', '127.0.0.1'),
         port: env.get('DB_PORT', 5432),
-        user: env.get('DB_USER', 'emi'),
+        user: env.get('DB_USER', 'postgres'),
         password: env.get('DB_PASSWORD', ''),
-        database: env.get('DB_DATABASE', 'emi_dev'),
+        database: env.get('DB_DATABASE', 'emi'),
       },
       migrations: {
         naturalSort: true,
@@ -62,9 +62,9 @@ const dbConfig = defineConfig({
       connection: {
         host: env.get('DB_HOST', '127.0.0.1'),
         port: env.get('DB_PORT', 3306),
-        user: env.get('DB_USER', 'emi'),
+        user: env.get('DB_USER', 'root'),
         password: env.get('DB_PASSWORD', ''),
-        database: env.get('DB_DATABASE', 'emi_dev'),
+        database: env.get('DB_DATABASE', 'emi'),
       },
       migrations: {
         naturalSort: true,
