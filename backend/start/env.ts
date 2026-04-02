@@ -24,4 +24,31 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   // Session
   SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
+
+  // Database
+  DB_CONNECTION: Env.schema.string.optional(),
+  DB_HOST: Env.schema.string.optional({ format: 'host' }),
+  DB_PORT: Env.schema.number.optional(),
+  DB_USER: Env.schema.string.optional(),
+  DB_PASSWORD: Env.schema.string.optional(),
+  DB_DATABASE: Env.schema.string.optional(),
+
+  // Redis
+  REDIS_HOST: Env.schema.string.optional({ format: 'host' }),
+  REDIS_PORT: Env.schema.number.optional(),
+  REDIS_PASSWORD: Env.schema.string.optional(),
+
+  // SMTP
+  SMTP_HOST: Env.schema.string.optional(),
+  SMTP_PORT: Env.schema.number.optional(),
+  SMTP_USERNAME: Env.schema.string.optional(),
+  SMTP_PASSWORD: Env.schema.string.optional(),
+  SMTP_FROM_ADDRESS: Env.schema.string.optional(),
+
+  // AWS S3
+  S3_KEY: Env.schema.string.optional(),
+  S3_SECRET: Env.schema.string.optional(),
+  S3_BUCKET: Env.schema.string.optional(),
+  S3_REGION: Env.schema.string.optional(),
+  S3_ENDPOINT: Env.schema.string.optional(),
 })

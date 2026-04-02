@@ -3,10 +3,30 @@ import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { type AccessToken, DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
+import { column, belongsTo, hasMany } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
+import Organization from '#models/organization'
+import Role from '#models/role'
+import BusinessUser from '#models/business_user'
 
 export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static accessTokens = DbAccessTokensProvider.forModel(User)
   declare currentAccessToken?: AccessToken
+
+  @column()
+  declare organizationId: number | null
+
+  @column()
+  declare roleId: number | null
+
+  @belongsTo(() => Organization)
+  declare organization: BelongsTo<typeof Organization>
+
+  @belongsTo(() => Role)
+  declare role: BelongsTo<typeof Role>
+
+  @hasMany(() => BusinessUser)
+  declare businessUsers: HasMany<typeof BusinessUser>
 
   get initials() {
     const [first, last] = this.fullName ? this.fullName.split(' ') : this.email.split('@')
