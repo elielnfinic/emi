@@ -19,6 +19,9 @@ const CustomersController = () => import('#controllers/customers_controller')
 const SuppliersController = () => import('#controllers/suppliers_controller')
 const SalesController = () => import('#controllers/sales_controller')
 const DashboardController = () => import('#controllers/dashboard_controller')
+const RotationsController = () => import('#controllers/rotations_controller')
+const BusinessUsersController = () => import('#controllers/business_users_controller')
+const ReportsController = () => import('#controllers/reports_controller')
 
 router.get('/', () => {
   return { hello: 'world', app: 'Emi', version: '1.0.0' }
@@ -99,6 +102,24 @@ router
         router.get('sales/:id', [SalesController, 'show'])
         router.post('sales/payments', [SalesController, 'addPayment'])
         router.delete('sales/:id', [SalesController, 'destroy'])
+
+        // Rotations CRUD
+        router.get('rotations', [RotationsController, 'index'])
+        router.post('rotations', [RotationsController, 'store'])
+        router.get('rotations/:id', [RotationsController, 'show'])
+        router.post('rotations/:id/close', [RotationsController, 'close'])
+        router.delete('rotations/:id', [RotationsController, 'destroy'])
+
+        // Business Users
+        router.get('business-users', [BusinessUsersController, 'index'])
+        router.post('business-users', [BusinessUsersController, 'store'])
+        router.get('business-users/users', [BusinessUsersController, 'users'])
+        router.delete('business-users/:id', [BusinessUsersController, 'destroy'])
+
+        // Reports
+        router.get('reports/sales', [ReportsController, 'salesReport'])
+        router.get('reports/transactions', [ReportsController, 'transactionsReport'])
+        router.get('reports/stock', [ReportsController, 'stockReport'])
       })
       .use(middleware.auth())
   })
