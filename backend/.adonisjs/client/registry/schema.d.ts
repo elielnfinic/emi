@@ -487,4 +487,148 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sales_controller').default['destroy']>>>
     }
   }
+  'rotations.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/rotations'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['index']>>>
+    }
+  }
+  'rotations.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/rotations'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['store']>>>
+    }
+  }
+  'rotations.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/rotations/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['show']>>>
+    }
+  }
+  'rotations.close': {
+    methods: ["POST"]
+    pattern: '/api/v1/rotations/:id/close'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['close']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['close']>>>
+    }
+  }
+  'rotations.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/rotations/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['destroy']>>>
+    }
+  }
+  'business_users.users': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/business-users/users'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['users']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['users']>>>
+    }
+  }
+  'business_users.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/business-users'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['index']>>>
+    }
+  }
+  'business_users.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/business-users'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['store']>>>
+    }
+  }
+  'business_users.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/business-users/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['destroy']>>>
+    }
+  }
+  'reports.sales_report': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/reports/sales'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['salesReport']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['salesReport']>>>
+    }
+  }
+  'reports.transactions_report': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/reports/transactions'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['transactionsReport']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['transactionsReport']>>>
+    }
+  }
+  'reports.stock_report': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/reports/stock'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['stockReport']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['stockReport']>>>
+    }
+  }
 }
