@@ -294,6 +294,12 @@ const routes = {
     tokens: [{"old":"/api/v1/business-users","type":0,"val":"api","end":""},{"old":"/api/v1/business-users","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users","type":0,"val":"business-users","end":""}],
     types: placeholder as Registry['business_users.store']['types'],
   },
+  'business_users.create_user': {
+    methods: ["POST"],
+    pattern: '/api/v1/business-users/create-user',
+    tokens: [{"old":"/api/v1/business-users/create-user","type":0,"val":"api","end":""},{"old":"/api/v1/business-users/create-user","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users/create-user","type":0,"val":"business-users","end":""},{"old":"/api/v1/business-users/create-user","type":0,"val":"create-user","end":""}],
+    types: placeholder as Registry['business_users.create_user']['types'],
+  },
   'business_users.destroy': {
     methods: ["DELETE"],
     pattern: '/api/v1/business-users/:id',

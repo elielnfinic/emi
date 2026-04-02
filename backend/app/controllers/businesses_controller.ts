@@ -1,12 +1,19 @@
 import Business from '#models/business'
 import { createBusinessValidator, updateBusinessValidator } from '#validators/business'
-import { getUserOrganizationId, verifyBusinessAccess, isOrgAdmin } from '#services/authorization'
+import { getUserOrganizationId, verifyBusinessAccess, isOrgAdmin, isSuperAdmin } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class BusinessesController {
   async index({ request, auth }: HttpContext) {
     const user = auth.getUserOrFail()
     const organizationId = request.input('organization_id')
+
+    if (await isSuperAdmin(user.id)) {
+      const query = Business.query().preload('organization').orderBy('name', 'asc')
+      if (organizationId) query.where('organizationId', organizationId)
+      return query
+    }
+
     const orgId = organizationId || (await getUserOrganizationId(user.id))
     if (!orgId) return []
 
@@ -23,21 +30,24 @@ export default class BusinessesController {
     const user = auth.getUserOrFail()
     const data = await request.validateUsing(createBusinessValidator)
 
-    // Verify the business is being created in user's org
-    const orgId = await getUserOrganizationId(user.id)
-    if (orgId && data.organizationId !== orgId) {
-      return response.forbidden({ error: 'You can only create businesses in your organization' })
-    }
+    const superAdmin = await isSuperAdmin(user.id)
 
-    // Only admins can create businesses
-    if (orgId) {
-      const admin = await isOrgAdmin(user.id, orgId)
-      if (!admin) {
-        return response.forbidden({ error: 'Only admins can create new businesses' })
+    if (!superAdmin) {
+      // Verify the business is being created in user's org
+      const orgId = await getUserOrganizationId(user.id)
+      if (orgId && data.organizationId !== orgId) {
+        return response.forbidden({ error: 'You can only create businesses in your organization' })
       }
-    } else {
-      // User has no org — they cannot create businesses
-      return response.forbidden({ error: 'You must be assigned to an organization to create businesses' })
+
+      // Only admins can create businesses
+      if (orgId) {
+        const admin = await isOrgAdmin(user.id, orgId)
+        if (!admin) {
+          return response.forbidden({ error: 'Only admins can create new businesses' })
+        }
+      } else {
+        return response.forbidden({ error: 'You must be assigned to an organization to create businesses' })
+      }
     }
 
     if (!data.slug) {

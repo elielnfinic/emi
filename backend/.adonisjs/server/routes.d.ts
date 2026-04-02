@@ -52,6 +52,7 @@ export type ScannedRoutes = {
     'business_users.users': { paramsTuple?: []; params?: {} }
     'business_users.index': { paramsTuple?: []; params?: {} }
     'business_users.store': { paramsTuple?: []; params?: {} }
+    'business_users.create_user': { paramsTuple?: []; params?: {} }
     'business_users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'reports.sales_report': { paramsTuple?: []; params?: {} }
     'reports.transactions_report': { paramsTuple?: []; params?: {} }
@@ -122,6 +123,7 @@ export type ScannedRoutes = {
     'rotations.store': { paramsTuple?: []; params?: {} }
     'rotations.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'business_users.store': { paramsTuple?: []; params?: {} }
+    'business_users.create_user': { paramsTuple?: []; params?: {} }
   }
   PUT: {
     'organizations.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

@@ -6,7 +6,7 @@ import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
-import { useAppStore } from '../stores'
+import { useAppStore, useAuthStore } from '../stores'
 import api from '../services/api'
 import type { BusinessUser, User } from '../types'
 
@@ -19,6 +19,8 @@ const ROLES = [
 
 export function UsersPage() {
   const { currentBusiness } = useAppStore()
+  const { user } = useAuthStore()
+  const isSuperAdmin = user?.role === 'superadmin'
   const bid = currentBusiness?.id
   const queryClient = useQueryClient()
 
@@ -100,6 +102,9 @@ export function UsersPage() {
       email: newEmail,
       password: newPassword,
       sendEmail,
+      ...(isSuperAdmin && currentBusiness?.organizationId
+        ? { organizationId: currentBusiness.organizationId }
+        : {}),
     })
   }
 

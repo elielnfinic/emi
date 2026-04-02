@@ -83,10 +83,10 @@ export interface Registry {
     methods: ["POST"]
     pattern: '/api/v1/organizations'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
+      body: ExtractBody<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
       paramsTuple: []
       params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
+      query: ExtractQuery<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
@@ -581,6 +581,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['store']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['store']>>>
+    }
+  }
+  'business_users.create_user': {
+    methods: ["POST"]
+    pattern: '/api/v1/business-users/create-user'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['createUser']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['createUser']>>>
     }
   }
   'business_users.destroy': {

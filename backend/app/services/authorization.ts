@@ -3,6 +3,15 @@ import Business from '#models/business'
 import type { HttpContext } from '@adonisjs/core/http'
 
 /**
+ * Check if a user has the superadmin system role.
+ */
+export async function isSuperAdmin(userId: number): Promise<boolean> {
+  const { default: User } = await import('#models/user')
+  const user = await User.query().where('id', userId).preload('role').first()
+  return user?.role?.name === 'superadmin'
+}
+
+/**
  * Role hierarchy: admin > manager > cashier = stock
  * - admin: Full access to everything in the business
  * - manager: Can manage sales, transactions, customers, suppliers, stock, reports
@@ -67,6 +76,9 @@ export async function verifyBusinessAccess(
     return ctx.response.forbidden({ error: 'Invalid business_id' }) as never
   }
 
+  // Superadmin bypasses all business access checks
+  if (await isSuperAdmin(user.id)) return 'admin'
+
   // Check the user belongs to this business
   const role = await getUserRoleInBusiness(user.id, bid)
   if (!role) {
@@ -93,6 +105,9 @@ export async function verifyOrgAccess(
   organizationId: number
 ): Promise<void> {
   const user = ctx.auth.getUserOrFail()
+
+  // Superadmin has access to all organizations
+  if (await isSuperAdmin(user.id)) return
 
   // If the user has organizationId set, check it matches
   if (user.organizationId && user.organizationId === organizationId) {

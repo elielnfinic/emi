@@ -79,6 +79,7 @@ export interface ApiDefinition {
     users: typeof routes['business_users.users']
     index: typeof routes['business_users.index']
     store: typeof routes['business_users.store']
+    createUser: typeof routes['business_users.create_user']
     destroy: typeof routes['business_users.destroy']
   }
   reports: {

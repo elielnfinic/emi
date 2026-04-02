@@ -11,23 +11,29 @@ export function AppLayout() {
   const { currentBusiness, setCurrentBusiness, sidebarOpen, toggleSidebar } = useAppStore()
   const navigate = useNavigate()
 
-  // Check if user has any business roles at all
+  const isSuperAdmin = user?.role === 'superadmin'
+
+  // Check if user has any business roles at all (superadmin bypasses this)
   const hasBusinessAccess = useMemo(() => {
+    if (isSuperAdmin) return true
     return user?.businessRoles && Object.keys(user.businessRoles).length > 0
-  }, [user])
+  }, [user, isSuperAdmin])
 
   const { data: orgs } = useQuery<Organization[]>({
     queryKey: ['organizations'],
     queryFn: async () => (await api.get('/organizations')).data,
-    enabled: !!hasBusinessAccess,
+    enabled: !!hasBusinessAccess && !isSuperAdmin,
   })
 
   const orgId = orgs?.[0]?.id
 
   const { data: businesses } = useQuery<Business[]>({
-    queryKey: ['businesses', orgId],
-    queryFn: async () => (await api.get('/businesses', { params: { organization_id: orgId } })).data,
-    enabled: !!orgId && !!hasBusinessAccess,
+    queryKey: ['businesses', isSuperAdmin ? 'all' : orgId],
+    queryFn: async () =>
+      isSuperAdmin
+        ? (await api.get('/businesses')).data
+        : (await api.get('/businesses', { params: { organization_id: orgId } })).data,
+    enabled: isSuperAdmin ? true : (!!orgId && !!hasBusinessAccess),
   })
 
   useEffect(() => {
@@ -48,11 +54,12 @@ export function AppLayout() {
     if (biz) setCurrentBusiness(biz)
   }
 
-  // Get the user's role in the current business
+  // Get the user's role in the current business (superadmin is always admin)
   const currentRole = useMemo(() => {
+    if (isSuperAdmin) return 'admin'
     if (!currentBusiness || !user?.businessRoles) return null
     return user.businessRoles[currentBusiness.id] || null
-  }, [currentBusiness, user])
+  }, [currentBusiness, user, isSuperAdmin])
 
   // Filter navigation items based on role — if no role, show nothing
   const mainNav = useMemo(() => {
@@ -78,19 +85,26 @@ export function AppLayout() {
   }, [currentRole])
 
   const settingsNav = useMemo(() => {
-    const items = [
-      { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
-      { to: '/users', label: 'Team', icon: 'users', roles: ['admin'] },
-    ]
+    const items = isSuperAdmin
+      ? [
+          { to: '/organizations', label: 'Organizations', icon: 'businesses', roles: ['admin'] },
+          { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
+          { to: '/users', label: 'Team', icon: 'users', roles: ['admin'] },
+        ]
+      : [
+          { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
+          { to: '/users', label: 'Team', icon: 'users', roles: ['admin'] },
+        ]
     if (!currentRole) return []
     return items.filter((i) => i.roles.includes(currentRole))
-  }, [currentRole])
+  }, [currentRole, isSuperAdmin])
 
   // Check if user is an admin in any business (for showing admin-only UI elements)
   const isAnyAdmin = useMemo(() => {
+    if (isSuperAdmin) return true
     if (!user?.businessRoles) return false
     return Object.values(user.businessRoles).some((role) => role === 'admin')
-  }, [user])
+  }, [user, isSuperAdmin])
 
   const renderNavItems = (items: typeof mainNav) =>
     items.map((item) => (

@@ -11,6 +11,8 @@ export default class AccessTokenController {
     const user = await User.verifyCredentials(email, password)
     const token = await User.accessTokens.create(user)
 
+    await user.load('role')
+
     // Include business roles in response
     const businessUsers = await BusinessUser.query()
       .where('userId', user.id)
@@ -25,6 +27,7 @@ export default class AccessTokenController {
     return serialize({
       user: {
         ...UserTransformer.transform(user),
+        role: user.role?.name ?? null,
         businessRoles,
       },
       token: token.value!.release(),

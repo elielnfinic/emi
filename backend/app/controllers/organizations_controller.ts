@@ -1,11 +1,14 @@
 import Organization from '#models/organization'
 import { createOrganizationValidator, updateOrganizationValidator } from '#validators/organization'
-import { getUserOrganizationId, verifyOrgAccess, isOrgAdmin } from '#services/authorization'
+import { getUserOrganizationId, verifyOrgAccess, isOrgAdmin, isSuperAdmin } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class OrganizationsController {
   async index({ auth }: HttpContext) {
     const user = auth.getUserOrFail()
+    if (await isSuperAdmin(user.id)) {
+      return Organization.query().orderBy('name', 'asc')
+    }
     const orgId = await getUserOrganizationId(user.id)
     if (!orgId) return []
     const organizations = await Organization.query().where('id', orgId).orderBy('name', 'asc')
