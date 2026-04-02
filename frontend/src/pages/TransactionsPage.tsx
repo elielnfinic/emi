@@ -21,6 +21,7 @@ export function TransactionsPage() {
   const queryClient = useQueryClient()
 
   const [showModal, setShowModal] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [type, setType] = useState('income')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -39,6 +40,8 @@ export function TransactionsPage() {
       queryClient.invalidateQueries({ queryKey: ['transactions', bid] })
       queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
       resetForm()
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
     },
   })
 
@@ -86,6 +89,12 @@ export function TransactionsPage() {
 
   return (
     <div className="space-y-6">
+      {showSuccess && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg animate-fade-in">
+          <span className="text-lg">✓</span>
+          <span className="font-medium">Transaction ajoutée avec succès !</span>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">Transactions</h1>
         <Button onClick={() => setShowModal(true)}>+ New Transaction</Button>
