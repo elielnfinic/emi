@@ -13,10 +13,10 @@ export const controllers = {
   Organizations: () => import('#controllers/organizations_controller'),
   Profile: () => import('#controllers/profile_controller'),
   Reports: () => import('#controllers/reports_controller'),
+  Roles: () => import('#controllers/roles_controller'),
   Rotations: () => import('#controllers/rotations_controller'),
   Sales: () => import('#controllers/sales_controller'),
   StockItems: () => import('#controllers/stock_items_controller'),
   Suppliers: () => import('#controllers/suppliers_controller'),
   Transactions: () => import('#controllers/transactions_controller'),
-  Roles: () => import('#controllers/roles_controller'),
 }

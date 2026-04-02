@@ -9,6 +9,9 @@ export default class TransactionsController {
     const businessId = ctx.request.input('business_id')
     const type = ctx.request.input('type')
     const beneficiary = ctx.request.input('beneficiary')
+    const search = ctx.request.input('search', '')
+    const page = ctx.request.input('page', 1)
+    const perPage = ctx.request.input('per_page', 20)
     await verifyBusinessAccess(ctx, businessId)
     const query = Transaction.query()
       .where('businessId', businessId)
@@ -20,8 +23,14 @@ export default class TransactionsController {
     if (beneficiary) {
       query.where('beneficiary', beneficiary)
     }
-    const transactions = await query.orderBy('date', 'desc')
-    return transactions
+    if (search) {
+      query.where((q) => {
+        q.whereILike('reference', `%${search}%`)
+          .orWhereILike('description', `%${search}%`)
+          .orWhereILike('beneficiary', `%${search}%`)
+      })
+    }
+    return await query.orderBy('date', 'desc').paginate(page, perPage)
   }
 
   async store(ctx: HttpContext) {

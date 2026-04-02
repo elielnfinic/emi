@@ -5,9 +5,10 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
 import { Icon } from '../components/ui/Icon'
+import { Pagination } from '../components/ui/Pagination'
 import { useAppStore } from '../stores'
 import api from '../services/api'
-import type { Supplier } from '../types'
+import type { Supplier, PaginatedResponse } from '../types'
 
 export function SuppliersPage() {
   const { currentBusiness } = useAppStore()
@@ -20,9 +21,12 @@ export function SuppliersPage() {
   const [address, setAddress] = useState('')
   const [notes, setNotes] = useState('')
 
-  const { data, isLoading } = useQuery<Supplier[]>({
-    queryKey: ['suppliers', bid],
-    queryFn: async () => (await api.get('/suppliers', { params: { business_id: bid } })).data,
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+
+  const { data, isLoading } = useQuery<PaginatedResponse<Supplier>>({
+    queryKey: ['suppliers', bid, search, page],
+    queryFn: async () => (await api.get('/suppliers', { params: { business_id: bid, search, page } })).data,
     enabled: !!bid,
   })
 
@@ -63,6 +67,11 @@ export function SuppliersPage() {
     if (window.confirm('Delete this supplier?')) deleteMutation.mutate(id)
   }
 
+  const handleSearch = (value: string) => {
+    setSearch(value)
+    setPage(1)
+  }
+
   if (!bid) return (
     <div className="text-center py-16">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-violet-light text-emi-violet mb-4">
@@ -73,6 +82,9 @@ export function SuppliersPage() {
     </div>
   )
   if (isLoading) return <Loader />
+
+  const suppliers = data?.data ?? []
+  const meta = data?.meta
 
   return (
     <div className="space-y-6">
@@ -95,6 +107,13 @@ export function SuppliersPage() {
 
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <Input
+                placeholder="Search by name, email or phone…"
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -107,7 +126,7 @@ export function SuppliersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {data?.length ? data.map((s) => (
+                  {suppliers.length ? suppliers.map((s) => (
                     <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900">
                         <Link to={`/suppliers/${s.id}`} className="text-emi-violet hover:underline">{s.name}</Link>
@@ -125,13 +144,14 @@ export function SuppliersPage() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-violet-light text-emi-violet mb-2">
                           <Icon name="suppliers" size={24} />
                         </div>
-                        <p className="text-gray-500">No suppliers yet. Add your first supplier.</p>
+                        <p className="text-gray-500">{search ? 'No suppliers match your search.' : 'No suppliers yet. Add your first supplier.'}</p>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            {meta && <Pagination meta={meta} onPageChange={setPage} />}
           </div>
         </div>
       </div>
