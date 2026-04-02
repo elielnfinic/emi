@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
@@ -108,7 +109,9 @@ export function CustomersPage() {
                 <tbody className="divide-y divide-gray-200">
                   {data?.length ? data.map((c) => (
                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">
+                        <Link to={`/customers/${c.id}`} className="text-emi-violet hover:underline">{c.name}</Link>
+                      </td>
                       <td className="px-6 py-4 text-gray-500">{c.email || '-'}</td>
                       <td className="px-6 py-4 text-gray-500">{c.phone || '-'}</td>
                       <td className="px-6 py-4 text-gray-500">{c.address || '-'}</td>

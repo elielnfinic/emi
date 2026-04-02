@@ -1,39 +1,43 @@
 import Supplier from '#models/supplier'
 import { createSupplierValidator, updateSupplierValidator } from '#validators/supplier'
+import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class SuppliersController {
-  async index({ request }: HttpContext) {
-    const businessId = request.input('business_id')
-    const query = Supplier.query()
-    if (businessId) {
-      query.where('businessId', businessId)
-    }
-    const suppliers = await query.orderBy('name', 'asc')
+  async index(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    await verifyBusinessAccess(ctx, businessId)
+    const suppliers = await Supplier.query()
+      .where('businessId', businessId)
+      .orderBy('name', 'asc')
     return suppliers
   }
 
-  async store({ request }: HttpContext) {
-    const data = await request.validateUsing(createSupplierValidator)
+  async store(ctx: HttpContext) {
+    const data = await ctx.request.validateUsing(createSupplierValidator)
+    await verifyBusinessAccess(ctx, data.businessId, ['admin', 'manager'])
     const supplier = await Supplier.create(data)
     return supplier
   }
 
-  async show({ params }: HttpContext) {
-    const supplier = await Supplier.findOrFail(params.id)
+  async show(ctx: HttpContext) {
+    const supplier = await Supplier.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, supplier.businessId)
     return supplier
   }
 
-  async update({ params, request }: HttpContext) {
-    const supplier = await Supplier.findOrFail(params.id)
-    const data = await request.validateUsing(updateSupplierValidator)
+  async update(ctx: HttpContext) {
+    const supplier = await Supplier.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, supplier.businessId, ['admin', 'manager'])
+    const data = await ctx.request.validateUsing(updateSupplierValidator)
     supplier.merge(data)
     await supplier.save()
     return supplier
   }
 
-  async destroy({ params }: HttpContext) {
-    const supplier = await Supplier.findOrFail(params.id)
+  async destroy(ctx: HttpContext) {
+    const supplier = await Supplier.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, supplier.businessId, ['admin', 'manager'])
     await supplier.delete()
     return { message: 'Supplier deleted successfully' }
   }

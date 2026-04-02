@@ -3,7 +3,7 @@ import { StatCard } from '../components/ui/Card'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
-import { useAppStore } from '../stores'
+import { useAppStore, useAuthStore } from '../stores'
 import api from '../services/api'
 import type { DashboardData } from '../types'
 
@@ -13,7 +13,11 @@ function fmt(amount: number, currency = 'USD') {
 
 export function DashboardPage() {
   const { currentBusiness } = useAppStore()
+  const { user } = useAuthStore()
   const businessId = currentBusiness?.id
+
+  const businessRole = businessId ? user?.businessRoles?.[businessId] : undefined
+  const canSeeMoney = user?.role === 'superadmin' || businessRole === 'admin' || businessRole === 'manager'
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ['dashboard', businessId],
@@ -43,15 +47,15 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Balance" value={fmt(k?.balance || 0, cur)} color="violet" icon={<Icon name="wallet" size={22} />} />
-        <StatCard title="Today's Sales" value={fmt(k?.todaySalesTotal || 0, cur)} color="green" icon={<Icon name="trending-up" size={22} />} />
-        <StatCard title="Monthly Sales" value={fmt(k?.monthSalesTotal || 0, cur)} color="blue" icon={<Icon name="bar-chart" size={22} />} />
+        {canSeeMoney && <StatCard title="Balance" value={fmt(k?.balance || 0, cur)} color="violet" icon={<Icon name="wallet" size={22} />} />}
+        {canSeeMoney && <StatCard title="Today's Sales" value={fmt(k?.todaySalesTotal || 0, cur)} color="green" icon={<Icon name="trending-up" size={22} />} />}
+        {canSeeMoney && <StatCard title="Monthly Sales" value={fmt(k?.monthSalesTotal || 0, cur)} color="blue" icon={<Icon name="bar-chart" size={22} />} />}
         <StatCard title="Low Stock Items" value={k?.lowStockCount || 0} color={k?.lowStockCount ? 'red' : 'green'} icon={<Icon name="alert" size={22} />} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Total Income" value={fmt(k?.totalIncome || 0, cur)} color="green" icon={<Icon name="arrow-up" size={22} />} />
-        <StatCard title="Total Expense" value={fmt(k?.totalExpense || 0, cur)} color="red" icon={<Icon name="arrow-down" size={22} />} />
+        {canSeeMoney && <StatCard title="Total Income" value={fmt(k?.totalIncome || 0, cur)} color="green" icon={<Icon name="arrow-up" size={22} />} />}
+        {canSeeMoney && <StatCard title="Total Expense" value={fmt(k?.totalExpense || 0, cur)} color="red" icon={<Icon name="arrow-down" size={22} />} />}
         <StatCard title="Customers" value={k?.totalCustomers || 0} color="violet" icon={<Icon name="customers" size={22} />} />
       </div>
 
@@ -69,9 +73,11 @@ export function DashboardPage() {
                   <p className="text-xs text-gray-500 mt-0.5">{tx.description || 'No description'}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emi-green' : 'text-red-600'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, cur)}
-                  </p>
+                  {canSeeMoney && (
+                    <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emi-green' : 'text-red-600'}`}>
+                      {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, cur)}
+                    </p>
+                  )}
                   <Badge variant={tx.type === 'income' ? 'success' : 'danger'}>{tx.type}</Badge>
                 </div>
               </div>
@@ -96,7 +102,9 @@ export function DashboardPage() {
                   <p className="text-xs text-gray-500 mt-0.5">{s.customer?.name || 'Walk-in'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">{fmt(s.totalAmount, cur)}</p>
+                  {canSeeMoney && (
+                    <p className="text-sm font-semibold text-gray-900">{fmt(s.totalAmount, cur)}</p>
+                  )}
                   <Badge variant={s.status === 'completed' ? 'success' : 'warning'}>{s.status}</Badge>
                 </div>
               </div>

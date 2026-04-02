@@ -75,10 +75,15 @@ export interface ApiDefinition {
     close: typeof routes['rotations.close']
     destroy: typeof routes['rotations.destroy']
   }
+  roles: {
+    index: typeof routes['roles.index']
+  }
   businessUsers: {
     users: typeof routes['business_users.users']
     index: typeof routes['business_users.index']
     store: typeof routes['business_users.store']
+    createUser: typeof routes['business_users.create_user']
+    update: typeof routes['business_users.update']
     destroy: typeof routes['business_users.destroy']
   }
   reports: {

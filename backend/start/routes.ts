@@ -21,6 +21,7 @@ const SalesController = () => import('#controllers/sales_controller')
 const DashboardController = () => import('#controllers/dashboard_controller')
 const RotationsController = () => import('#controllers/rotations_controller')
 const BusinessUsersController = () => import('#controllers/business_users_controller')
+const RolesController = () => import('#controllers/roles_controller')
 const ReportsController = () => import('#controllers/reports_controller')
 
 router.get('/', () => {
@@ -110,10 +111,15 @@ router
         router.post('rotations/:id/close', [RotationsController, 'close'])
         router.delete('rotations/:id', [RotationsController, 'destroy'])
 
+        // Roles
+        router.get('roles', [RolesController, 'index'])
+
         // Business Users
         router.get('business-users/users', [BusinessUsersController, 'users'])
         router.get('business-users', [BusinessUsersController, 'index'])
         router.post('business-users', [BusinessUsersController, 'store'])
+        router.post('business-users/create-user', [BusinessUsersController, 'createUser'])
+        router.patch('business-users/:id', [BusinessUsersController, 'update'])
         router.delete('business-users/:id', [BusinessUsersController, 'destroy'])
 
         // Reports

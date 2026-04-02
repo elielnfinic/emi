@@ -1,28 +1,34 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
-import { useAppStore } from '../stores'
+import { useAppStore, useAuthStore } from '../stores'
 import api from '../services/api'
-import type { BusinessUser, User } from '../types'
-
-const ROLES = [
-  { value: '1', label: 'Admin' },
-  { value: '2', label: 'Manager' },
-  { value: '3', label: 'Cashier' },
-  { value: '4', label: 'Stock' },
-]
+import type { BusinessUser, Role, User } from '../types'
 
 export function UsersPage() {
   const { currentBusiness } = useAppStore()
+  const { user } = useAuthStore()
+  const isSuperAdmin = user?.role === 'superadmin'
   const bid = currentBusiness?.id
   const queryClient = useQueryClient()
 
   const [userId, setUserId] = useState('')
-  const [roleId, setRoleId] = useState('3')
+  const [roleId, setRoleId] = useState('')
+  const [assignBusinessId, setAssignBusinessId] = useState(String(bid ?? ''))
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editRoleId, setEditRoleId] = useState('')
+
+  // Create new user form state
+  const [newFullName, setNewFullName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [sendEmail, setSendEmail] = useState(true)
+  const [createError, setCreateError] = useState('')
 
   const { data: businessUsers, isLoading } = useQuery<BusinessUser[]>({
     queryKey: ['business-users', bid],
@@ -36,11 +42,37 @@ export function UsersPage() {
     enabled: !!bid,
   })
 
-  const createMutation = useMutation({
+  const { data: allBusinesses } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['businesses'],
+    queryFn: async () => (await api.get('/businesses')).data,
+    enabled: !!bid,
+  })
+
+  const { data: roles } = useQuery<Role[]>({
+    queryKey: ['roles'],
+    queryFn: async () => (await api.get('/roles')).data,
+  })
+
+  const assignMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => api.post('/business-users', payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['business-users', variables.businessId] })
       queryClient.invalidateQueries({ queryKey: ['business-users', bid] })
-      resetForm()
+      resetAssignForm()
+    },
+  })
+
+  const createUserMutation = useMutation({
+    mutationFn: (payload: { fullName: string; email: string; password: string; sendEmail: boolean }) =>
+      api.post('/business-users/create-user', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users'] })
+      resetCreateForm()
+      setCreateError('')
+    },
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { errors?: { message: string }[]; error?: string } } }
+      setCreateError(error.response?.data?.error || error.response?.data?.errors?.[0]?.message || 'Failed to create user.')
     },
   })
 
@@ -49,17 +81,49 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['business-users', bid] }),
   })
 
-  const resetForm = () => {
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, roleId }: { id: number; roleId: number }) =>
+      api.patch(`/business-users/${id}`, { roleId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['business-users', bid] })
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      setEditingId(null)
+    },
+  })
+
+  const resetAssignForm = () => {
     setUserId('')
-    setRoleId('3')
+    setRoleId('')
+    setAssignBusinessId(String(bid ?? ''))
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const resetCreateForm = () => {
+    setNewFullName('')
+    setNewEmail('')
+    setNewPassword('')
+    setSendEmail(true)
+  }
+
+  const handleAssignSubmit = (e: FormEvent) => {
     e.preventDefault()
-    createMutation.mutate({
-      businessId: bid,
+    assignMutation.mutate({
+      businessId: Number(assignBusinessId),
       userId: Number(userId),
       roleId: Number(roleId),
+    })
+  }
+
+  const handleCreateUser = (e: FormEvent) => {
+    e.preventDefault()
+    setCreateError('')
+    createUserMutation.mutate({
+      fullName: newFullName,
+      email: newEmail,
+      password: newPassword,
+      sendEmail,
+      ...(isSuperAdmin && currentBusiness?.organizationId
+        ? { organizationId: currentBusiness.organizationId }
+        : {}),
     })
   }
 
@@ -83,10 +147,44 @@ export function UsersPage() {
       <h1 className="text-2xl font-bold text-gray-900">Team</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
+          {/* Create New User */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New User</h3>
+            <form onSubmit={handleCreateUser} className="space-y-3">
+              {createError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{createError}</div>
+              )}
+              <Input label="Full Name" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} placeholder="John Doe" required />
+              <Input label="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" required />
+              <Input label="Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" required />
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-emi-violet focus:ring-emi-violet/30"
+                />
+                <span className="text-sm text-gray-700">Send credentials via email</span>
+              </label>
+              <Button type="submit" className="w-full" loading={createUserMutation.isPending}>
+                Create User
+              </Button>
+            </form>
+          </div>
+
+          {/* Assign User to Business */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Add User to Business</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleAssignSubmit} className="space-y-3">
+              <Select
+                label="Business"
+                value={assignBusinessId}
+                onChange={(e) => setAssignBusinessId(e.target.value)}
+                options={allBusinesses?.map((b) => ({ value: String(b.id), label: b.name })) || []}
+                placeholder="Select a business..."
+                required
+              />
               <Select
                 label="User"
                 value={userId}
@@ -99,9 +197,11 @@ export function UsersPage() {
                 label="Role"
                 value={roleId}
                 onChange={(e) => setRoleId(e.target.value)}
-                options={ROLES}
+                options={roles?.map((r) => ({ value: String(r.id), label: r.displayName })) || []}
+                placeholder="Select a role..."
+                required
               />
-              <Button type="submit" className="w-full" loading={createMutation.isPending} disabled={!userId}>
+              <Button type="submit" className="w-full" loading={assignMutation.isPending} disabled={!userId || !assignBusinessId || !roleId}>
                 Add User
               </Button>
             </form>
@@ -127,13 +227,49 @@ export function UsersPage() {
                       <td className="px-6 py-4 font-medium text-gray-900">{bu.user?.fullName || `User #${bu.userId}`}</td>
                       <td className="px-6 py-4 text-gray-500">{bu.user?.email || '-'}</td>
                       <td className="px-6 py-4">
-                        <Badge variant="info">{bu.role?.displayName || bu.role?.name || `Role #${bu.roleId}`}</Badge>
+                        {editingId === bu.id ? (
+                          <select
+                            value={editRoleId}
+                            onChange={(e) => setEditRoleId(e.target.value)}
+                            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emi-violet/30"
+                          >
+                            {roles?.map((r) => (
+                              <option key={r.id} value={String(r.id)}>{r.displayName}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Badge variant="info">{bu.role?.displayName || bu.role?.name || `Role #${bu.roleId}`}</Badge>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={bu.isActive ? 'success' : 'default'}>{bu.isActive ? 'Active' : 'Inactive'}</Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(bu.id)}>Remove</Button>
+                        {editingId === bu.id ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              loading={updateRoleMutation.isPending}
+                              onClick={() => updateRoleMutation.mutate({ id: bu.id, roleId: Number(editRoleId) })}
+                            >
+                              Save
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => { setEditingId(bu.id); setEditRoleId(String(bu.roleId)) }}
+                            >
+                              Edit Role
+                            </Button>
+                            <Button variant="danger" size="sm" onClick={() => handleDelete(bu.id)}>Remove</Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )) : (

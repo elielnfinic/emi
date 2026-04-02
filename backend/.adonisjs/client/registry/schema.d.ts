@@ -83,10 +83,10 @@ export interface Registry {
     methods: ["POST"]
     pattern: '/api/v1/organizations'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
+      body: ExtractBody<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
       paramsTuple: []
       params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
+      query: ExtractQuery<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
@@ -547,6 +547,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/rotations_controller').default['destroy']>>>
     }
   }
+  'roles.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/roles'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/roles_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/roles_controller').default['index']>>>
+    }
+  }
   'business_users.users': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/business-users/users'
@@ -581,6 +593,30 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['store']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['store']>>>
+    }
+  }
+  'business_users.create_user': {
+    methods: ["POST"]
+    pattern: '/api/v1/business-users/create-user'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['createUser']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['createUser']>>>
+    }
+  }
+  'business_users.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/business-users/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('@vinejs/vine').default)['compile']>|InferInput<(typeof import('@vinejs/vine').default)['object']>|InferInput<(typeof import('@vinejs/vine').default)['number']>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('@vinejs/vine').default)['compile']>|InferInput<(typeof import('@vinejs/vine').default)['object']>|InferInput<(typeof import('@vinejs/vine').default)['number']>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/business_users_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'business_users.destroy': {

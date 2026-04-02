@@ -1,3 +1,10 @@
+export interface Role {
+  id: number
+  name: string
+  displayName: string
+  description: string | null
+}
+
 export interface User {
   id: number
   fullName: string | null
@@ -5,6 +12,8 @@ export interface User {
   initials: string
   organizationId: number | null
   roleId: number | null
+  role?: string | null
+  businessRoles?: Record<number, string>
   createdAt: string
   updatedAt: string | null
 }

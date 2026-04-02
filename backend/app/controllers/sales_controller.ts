@@ -4,24 +4,33 @@ import SalePayment from '#models/sale_payment'
 import StockItem from '#models/stock_item'
 import StockMovement from '#models/stock_movement'
 import { createSaleValidator, createSalePaymentValidator } from '#validators/sale'
+import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
 export default class SalesController {
-  async index({ request }: HttpContext) {
-    const businessId = request.input('business_id')
-    const type = request.input('type')
-    const status = request.input('status')
-    const query = Sale.query().preload('customer').preload('user').preload('items')
-    if (businessId) query.where('businessId', businessId)
+  async index(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    const customerId = ctx.request.input('customer_id')
+    const type = ctx.request.input('type')
+    const status = ctx.request.input('status')
+    await verifyBusinessAccess(ctx, businessId)
+    const query = Sale.query()
+      .where('businessId', businessId)
+      .preload('customer')
+      .preload('user')
+      .preload('items')
+      .preload('payments')
+    if (customerId) query.where('customerId', customerId)
     if (type) query.where('type', type)
     if (status) query.where('status', status)
     return await query.orderBy('date', 'desc')
   }
 
-  async store({ request, auth }: HttpContext) {
-    const user = auth.getUserOrFail()
-    const data = await request.validateUsing(createSaleValidator)
+  async store(ctx: HttpContext) {
+    const user = ctx.auth.getUserOrFail()
+    const data = await ctx.request.validateUsing(createSaleValidator)
+    await verifyBusinessAccess(ctx, data.businessId, ['admin', 'manager', 'cashier'])
 
     const lastSale = await Sale.query()
       .where('businessId', data.businessId)
@@ -97,27 +106,30 @@ export default class SalesController {
     return sale
   }
 
-  async show({ params }: HttpContext) {
-    return await Sale.query()
-      .where('id', params.id)
+  async show(ctx: HttpContext) {
+    const sale = await Sale.query()
+      .where('id', ctx.params.id)
       .preload('customer')
       .preload('user')
       .preload('items')
       .preload('payments')
       .firstOrFail()
+    await verifyBusinessAccess(ctx, sale.businessId)
+    return sale
   }
 
-  async addPayment({ request }: HttpContext) {
-    const data = await request.validateUsing(createSalePaymentValidator)
+  async addPayment(ctx: HttpContext) {
+    const data = await ctx.request.validateUsing(createSalePaymentValidator)
     const sale = await Sale.findOrFail(data.saleId)
+    await verifyBusinessAccess(ctx, sale.businessId, ['admin', 'manager', 'cashier'])
 
     const payment = await SalePayment.create({
       ...data,
       date: DateTime.fromISO(data.date),
     })
 
-    sale.paidAmount += data.amount
-    if (sale.paidAmount >= sale.totalAmount) {
+    sale.paidAmount = Number(sale.paidAmount) + data.amount
+    if (sale.paidAmount >= Number(sale.totalAmount)) {
       sale.status = 'completed'
     }
     await sale.save()
@@ -125,8 +137,9 @@ export default class SalesController {
     return payment
   }
 
-  async destroy({ params }: HttpContext) {
-    const sale = await Sale.findOrFail(params.id)
+  async destroy(ctx: HttpContext) {
+    const sale = await Sale.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, sale.businessId, ['admin', 'manager'])
     await sale.delete()
     return { message: 'Sale deleted successfully' }
   }

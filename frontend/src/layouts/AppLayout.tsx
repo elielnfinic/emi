@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore, useAppStore } from '../stores'
@@ -7,21 +7,45 @@ import api from '../services/api'
 import type { Business, Organization } from '../types'
 
 export function AppLayout() {
-  const { user, logout } = useAuthStore()
+  const { user, logout, setUser } = useAuthStore()
   const { currentBusiness, setCurrentBusiness, sidebarOpen, toggleSidebar } = useAppStore()
   const navigate = useNavigate()
+
+  const isSuperAdmin = user?.role === 'superadmin'
+
+  // Refresh businessRoles from the server on mount so role changes take effect without re-login
+  useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const res = await api.get('/account/profile')
+      const profile = res.data?.data ?? res.data
+      setUser(profile)
+      return profile
+    },
+    staleTime: 60_000,
+  })
+
+  // Check if user has any business roles at all (superadmin bypasses this)
+  const hasBusinessAccess = useMemo(() => {
+    if (isSuperAdmin) return true
+    return user?.businessRoles && Object.keys(user.businessRoles).length > 0
+  }, [user, isSuperAdmin])
 
   const { data: orgs } = useQuery<Organization[]>({
     queryKey: ['organizations'],
     queryFn: async () => (await api.get('/organizations')).data,
+    enabled: !!hasBusinessAccess && !isSuperAdmin,
   })
 
   const orgId = orgs?.[0]?.id
 
   const { data: businesses } = useQuery<Business[]>({
-    queryKey: ['businesses', orgId],
-    queryFn: async () => (await api.get('/businesses', { params: { organization_id: orgId } })).data,
-    enabled: !!orgId,
+    queryKey: ['businesses', isSuperAdmin ? 'all' : orgId],
+    queryFn: async () =>
+      isSuperAdmin
+        ? (await api.get('/businesses')).data
+        : (await api.get('/businesses', { params: { organization_id: orgId } })).data,
+    enabled: isSuperAdmin ? true : (!!orgId && !!hasBusinessAccess),
   })
 
   useEffect(() => {
@@ -42,24 +66,58 @@ export function AppLayout() {
     if (biz) setCurrentBusiness(biz)
   }
 
-  const mainNav = [
-    { to: '/dashboard', label: 'Dashboard', icon: 'home' },
-    { to: '/sales', label: 'Sales', icon: 'sales' },
-    { to: '/stock', label: 'Inventory', icon: 'stock' },
-    { to: '/customers', label: 'Customers', icon: 'customers' },
-    { to: '/suppliers', label: 'Suppliers', icon: 'suppliers' },
-  ]
+  // Get the user's role in the current business (superadmin is always admin)
+  const currentRole = useMemo(() => {
+    if (isSuperAdmin) return 'admin'
+    if (!currentBusiness || !user?.businessRoles) return null
+    return user.businessRoles[currentBusiness.id] || null
+  }, [currentBusiness, user, isSuperAdmin])
 
-  const financeNav = [
-    { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down' },
-    { to: '/rotations', label: 'Rotations', icon: 'rotations' },
-    { to: '/reports', label: 'Reports', icon: 'reports' },
-  ]
+  // Filter navigation items based on role — if no role, show nothing
+  const mainNav = useMemo(() => {
+    const items = [
+      { to: '/dashboard', label: 'Dashboard', icon: 'home', roles: ['admin', 'manager', 'cashier', 'stock'] },
+      { to: '/sales', label: 'Sales', icon: 'sales', roles: ['admin', 'manager', 'cashier'] },
+      { to: '/stock', label: 'Inventory', icon: 'stock', roles: ['admin', 'manager', 'stock'] },
+      { to: '/customers', label: 'Customers', icon: 'customers', roles: ['admin', 'manager', 'cashier'] },
+      { to: '/suppliers', label: 'Suppliers', icon: 'suppliers', roles: ['admin', 'manager'] },
+    ]
+    if (!currentRole) return []
+    return items.filter((i) => i.roles.includes(currentRole))
+  }, [currentRole])
 
-  const settingsNav = [
-    { to: '/businesses', label: 'Businesses', icon: 'businesses' },
-    { to: '/users', label: 'Team', icon: 'users' },
-  ]
+  const financeNav = useMemo(() => {
+    const items = [
+      { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down', roles: ['admin', 'manager'] },
+      { to: '/unpaid-bills', label: 'Unpaid Bills', icon: 'debt', roles: ['admin', 'manager', 'cashier'] },
+      { to: '/rotations', label: 'Rotations', icon: 'rotations', roles: ['admin', 'manager'] },
+      { to: '/reports', label: 'Reports', icon: 'reports', roles: ['admin', 'manager'] },
+    ]
+    if (!currentRole) return []
+    return items.filter((i) => i.roles.includes(currentRole))
+  }, [currentRole])
+
+  const settingsNav = useMemo(() => {
+    const items = isSuperAdmin
+      ? [
+          { to: '/organizations', label: 'Organizations', icon: 'businesses', roles: ['admin'] },
+          { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
+          { to: '/users', label: 'Team', icon: 'users', roles: ['admin'] },
+        ]
+      : [
+          { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
+          { to: '/users', label: 'Team', icon: 'users', roles: ['admin'] },
+        ]
+    if (!currentRole) return []
+    return items.filter((i) => i.roles.includes(currentRole))
+  }, [currentRole, isSuperAdmin])
+
+  // Check if user is an admin in any business (for showing admin-only UI elements)
+  const isAnyAdmin = useMemo(() => {
+    if (isSuperAdmin) return true
+    if (!user?.businessRoles) return false
+    return Object.values(user.businessRoles).some((role) => role === 'admin')
+  }, [user, isSuperAdmin])
 
   const renderNavItems = (items: typeof mainNav) =>
     items.map((item) => (
@@ -78,6 +136,53 @@ export function AppLayout() {
         <span>{item.label}</span>
       </NavLink>
     ))
+
+  // If user has no business memberships, show restricted screen
+  if (!hasBusinessAccess) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <div className="flex-1 flex flex-col">
+          <header className="bg-white border-b border-gray-100 px-4 lg:px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/icon.png" alt="EMI" className="w-8 h-8 rounded-lg" />
+              <h1 className="text-lg font-extrabold tracking-wide text-emi-violet" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                EMI
+              </h1>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+            >
+              <Icon name="logout" size={16} />
+              <span>Sign out</span>
+            </button>
+          </header>
+          <main className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center max-w-md">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-amber-50 text-amber-500 mb-6">
+                <Icon name="alert" size={40} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">No Access</h2>
+              <p className="text-gray-500 leading-relaxed mb-6">
+                You are not a member of any organization. Please reach out to your administrator to be assigned to a business.
+              </p>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emi-violet to-emi-green text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                    {user?.initials || '??'}
+                  </div>
+                  <div className="text-left min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{user?.fullName || 'User'}</p>
+                    <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -116,32 +221,40 @@ export function AppLayout() {
                 <Icon name="chevron-down" size={14} />
               </div>
             </div>
-          ) : (
+          ) : isAnyAdmin ? (
             <NavLink to="/businesses" className="flex items-center justify-center gap-2 text-sm text-emi-violet hover:text-emi-violet-dark py-2 px-3 rounded-lg border border-dashed border-emi-violet/30 hover:border-emi-violet/50 transition-colors">
               <Icon name="plus" size={16} />
               <span>Create a business</span>
             </NavLink>
+          ) : (
+            <p className="text-xs text-gray-400 text-center py-2">No businesses available</p>
           )}
         </div>
 
         <nav className="flex-1 p-3 space-y-5 overflow-y-auto">
-          <div className="space-y-0.5">
-            {renderNavItems(mainNav)}
-          </div>
-
-          <div>
-            <p className="px-3 mb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Finance</p>
+          {mainNav.length > 0 && (
             <div className="space-y-0.5">
-              {renderNavItems(financeNav)}
+              {renderNavItems(mainNav)}
             </div>
-          </div>
+          )}
 
-          <div>
-            <p className="px-3 mb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Settings</p>
-            <div className="space-y-0.5">
-              {renderNavItems(settingsNav)}
+          {financeNav.length > 0 && (
+            <div>
+              <p className="px-3 mb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Finance</p>
+              <div className="space-y-0.5">
+                {renderNavItems(financeNav)}
+              </div>
             </div>
-          </div>
+          )}
+
+          {settingsNav.length > 0 && (
+            <div>
+              <p className="px-3 mb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Settings</p>
+              <div className="space-y-0.5">
+                {renderNavItems(settingsNav)}
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className="p-3 border-t border-gray-100">

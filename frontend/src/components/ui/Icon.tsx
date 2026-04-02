@@ -222,6 +222,16 @@ const paths: Record<string, ReactNode> = {
       d="M12 4v16m8-8H4"
     />
   ),
+  debt: (
+    <path
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  ),
   settings: (
     <path
       stroke="currentColor"
