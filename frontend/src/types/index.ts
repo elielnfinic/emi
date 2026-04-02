@@ -5,6 +5,7 @@ export interface User {
   initials: string
   organizationId: number | null
   roleId: number | null
+  businessRoles?: Record<number, string>
   createdAt: string
   updatedAt: string | null
 }

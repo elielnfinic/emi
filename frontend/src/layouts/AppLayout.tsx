@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore, useAppStore } from '../stores'
@@ -42,24 +42,43 @@ export function AppLayout() {
     if (biz) setCurrentBusiness(biz)
   }
 
-  const mainNav = [
-    { to: '/dashboard', label: 'Dashboard', icon: 'home' },
-    { to: '/sales', label: 'Sales', icon: 'sales' },
-    { to: '/stock', label: 'Inventory', icon: 'stock' },
-    { to: '/customers', label: 'Customers', icon: 'customers' },
-    { to: '/suppliers', label: 'Suppliers', icon: 'suppliers' },
-  ]
+  // Get the user's role in the current business
+  const currentRole = useMemo(() => {
+    if (!currentBusiness || !user?.businessRoles) return null
+    return user.businessRoles[currentBusiness.id] || null
+  }, [currentBusiness, user])
 
-  const financeNav = [
-    { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down' },
-    { to: '/rotations', label: 'Rotations', icon: 'rotations' },
-    { to: '/reports', label: 'Reports', icon: 'reports' },
-  ]
+  // Filter navigation items based on role
+  const mainNav = useMemo(() => {
+    const items = [
+      { to: '/dashboard', label: 'Dashboard', icon: 'home', roles: ['admin', 'manager', 'cashier', 'stock'] },
+      { to: '/sales', label: 'Sales', icon: 'sales', roles: ['admin', 'manager', 'cashier'] },
+      { to: '/stock', label: 'Inventory', icon: 'stock', roles: ['admin', 'manager', 'stock'] },
+      { to: '/customers', label: 'Customers', icon: 'customers', roles: ['admin', 'manager', 'cashier'] },
+      { to: '/suppliers', label: 'Suppliers', icon: 'suppliers', roles: ['admin', 'manager'] },
+    ]
+    if (!currentRole) return items // show all if no role yet (owner/bootstrapping)
+    return items.filter((i) => i.roles.includes(currentRole))
+  }, [currentRole])
 
-  const settingsNav = [
-    { to: '/businesses', label: 'Businesses', icon: 'businesses' },
-    { to: '/users', label: 'Team', icon: 'users' },
-  ]
+  const financeNav = useMemo(() => {
+    const items = [
+      { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down', roles: ['admin', 'manager'] },
+      { to: '/rotations', label: 'Rotations', icon: 'rotations', roles: ['admin', 'manager'] },
+      { to: '/reports', label: 'Reports', icon: 'reports', roles: ['admin', 'manager'] },
+    ]
+    if (!currentRole) return items
+    return items.filter((i) => i.roles.includes(currentRole))
+  }, [currentRole])
+
+  const settingsNav = useMemo(() => {
+    const items = [
+      { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
+      { to: '/users', label: 'Team', icon: 'users', roles: ['admin'] },
+    ]
+    if (!currentRole) return items
+    return items.filter((i) => i.roles.includes(currentRole))
+  }, [currentRole])
 
   const renderNavItems = (items: typeof mainNav) =>
     items.map((item) => (

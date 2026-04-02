@@ -29,6 +29,7 @@ export function UsersPage() {
   const [newFullName, setNewFullName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [sendEmail, setSendEmail] = useState(true)
   const [createError, setCreateError] = useState('')
 
   const { data: businessUsers, isLoading } = useQuery<BusinessUser[]>({
@@ -52,7 +53,7 @@ export function UsersPage() {
   })
 
   const createUserMutation = useMutation({
-    mutationFn: (payload: { fullName: string; email: string; password: string }) =>
+    mutationFn: (payload: { fullName: string; email: string; password: string; sendEmail: boolean }) =>
       api.post('/business-users/create-user', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-users'] })
@@ -60,8 +61,8 @@ export function UsersPage() {
       setCreateError('')
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { errors?: { message: string }[] } } }
-      setCreateError(error.response?.data?.errors?.[0]?.message || 'Failed to create user.')
+      const error = err as { response?: { data?: { errors?: { message: string }[]; error?: string } } }
+      setCreateError(error.response?.data?.error || error.response?.data?.errors?.[0]?.message || 'Failed to create user.')
     },
   })
 
@@ -79,6 +80,7 @@ export function UsersPage() {
     setNewFullName('')
     setNewEmail('')
     setNewPassword('')
+    setSendEmail(true)
   }
 
   const handleAssignSubmit = (e: FormEvent) => {
@@ -97,6 +99,7 @@ export function UsersPage() {
       fullName: newFullName,
       email: newEmail,
       password: newPassword,
+      sendEmail,
     })
   }
 
@@ -131,6 +134,15 @@ export function UsersPage() {
               <Input label="Full Name" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} placeholder="John Doe" required />
               <Input label="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" required />
               <Input label="Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" required />
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-emi-violet focus:ring-emi-violet/30"
+                />
+                <span className="text-sm text-gray-700">Send credentials via email</span>
+              </label>
               <Button type="submit" className="w-full" loading={createUserMutation.isPending}>
                 Create User
               </Button>
