@@ -14,7 +14,7 @@ function fmt(n: number, currency = 'USD') {
 }
 
 interface SaleItemInput {
-  stockItemId: number | null
+  stockItemId: number
   name: string
   quantity: number
   unitPrice: number
