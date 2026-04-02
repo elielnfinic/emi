@@ -32,7 +32,7 @@ export default class BusinessUsersController {
     return businessUser
   }
 
-  async users({}: HttpContext) {
+  async users(_ctx: HttpContext) {
     return await User.query().orderBy('fullName', 'asc')
   }
 

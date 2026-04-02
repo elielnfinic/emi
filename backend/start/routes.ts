@@ -111,9 +111,9 @@ router
         router.delete('rotations/:id', [RotationsController, 'destroy'])
 
         // Business Users
+        router.get('business-users/users', [BusinessUsersController, 'users'])
         router.get('business-users', [BusinessUsersController, 'index'])
         router.post('business-users', [BusinessUsersController, 'store'])
-        router.get('business-users/users', [BusinessUsersController, 'users'])
         router.delete('business-users/:id', [BusinessUsersController, 'destroy'])
 
         // Reports

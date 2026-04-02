@@ -53,9 +53,10 @@ export default class RotationsController {
     const user = auth.getUserOrFail()
     const data = await request.validateUsing(closeRotationValidator)
     const rotation = await Rotation.findOrFail(params.id)
+    const now = DateTime.now()
     rotation.status = 'closed'
-    rotation.endDate = DateTime.now()
-    rotation.closedAt = DateTime.now()
+    rotation.endDate = now
+    rotation.closedAt = now
     rotation.closedBy = user.id
     if (data.notes) rotation.notes = data.notes
     await rotation.save()
