@@ -9,6 +9,17 @@ import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
+function reasonForType(type: string): string {
+  switch (type) {
+    case 'in':
+      return 'stock_in'
+    case 'out':
+      return 'stock_out'
+    default:
+      return 'adjustment'
+  }
+}
+
 export default class StockTransactionsController {
   async index(ctx: HttpContext) {
     const businessId = ctx.request.input('business_id')
@@ -51,7 +62,7 @@ export default class StockTransactionsController {
       unitPrice: data.unitPrice ?? null,
       supplierId: data.supplierId ?? null,
       rotationId: data.rotationId ?? null,
-      reason: data.type === 'in' ? 'stock_in' : data.type === 'out' ? 'stock_out' : 'adjustment',
+      reason: reasonForType(data.type),
       date: data.date ? DateTime.fromISO(data.date) : DateTime.now(),
       notes: data.notes ?? null,
     })
@@ -157,15 +168,12 @@ export default class StockTransactionsController {
     const firstMovement = await StockMovement.findOrFail(data.transactionIds[0])
     await verifyBusinessAccess(ctx, firstMovement.businessId, ['admin', 'manager'])
 
-    let updated = 0
-    for (const id of data.transactionIds) {
-      const movement = await StockMovement.find(id)
-      if (movement && movement.businessId === firstMovement.businessId) {
-        movement.rotationId = data.rotationId
-        await movement.save()
-        updated++
-      }
-    }
+    const result = await StockMovement.query()
+      .whereIn('id', data.transactionIds)
+      .where('businessId', firstMovement.businessId)
+      .update({ rotationId: data.rotationId })
+
+    const updated = Array.isArray(result) ? result[0] : result
 
     return { message: `${updated} transactions moved successfully`, updated }
   }
