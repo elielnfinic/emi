@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
+import { Icon } from '../components/ui/Icon'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Sale, Transaction, StockItem } from '../types'
@@ -52,7 +53,9 @@ export function ReportsPage() {
 
   if (!bid) return (
     <div className="text-center py-16">
-      <div className="text-5xl mb-4">📋</div>
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-violet-light text-emi-violet mb-4">
+        <Icon name="reports" size={28} />
+      </div>
       <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
       <p className="text-gray-500">Select a business to view reports.</p>
     </div>
@@ -72,7 +75,7 @@ export function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
@@ -149,7 +152,7 @@ export function ReportsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <p className="text-sm text-gray-500">Total Income</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{fmt(totalIncome, cur)}</p>
+              <p className="text-2xl font-bold text-emi-green mt-1">{fmt(totalIncome, cur)}</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <p className="text-sm text-gray-500">Total Expense</p>
@@ -178,7 +181,7 @@ export function ReportsPage() {
                       <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 font-medium text-gray-900">{tx.reference}</td>
                         <td className="px-6 py-4 text-gray-500 capitalize">{tx.type}</td>
-                        <td className={`px-6 py-4 font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                        <td className={`px-6 py-4 font-medium ${tx.type === 'income' ? 'text-emi-green' : 'text-red-600'}`}>
                           {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, cur)}
                         </td>
                         <td className="px-6 py-4 text-gray-500">{tx.description || '-'}</td>

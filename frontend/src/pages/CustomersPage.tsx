@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
+import { Icon } from '../components/ui/Icon'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Customer } from '../types'
@@ -63,7 +64,9 @@ export function CustomersPage() {
 
   if (!bid) return (
     <div className="text-center py-16">
-      <div className="text-5xl mb-4">👥</div>
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
+        <Icon name="customers" size={28} />
+      </div>
       <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
       <p className="text-gray-500">Select a business to manage customers.</p>
     </div>
@@ -72,7 +75,7 @@ export function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
@@ -116,7 +119,9 @@ export function CustomersPage() {
                   )) : (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center">
-                        <div className="text-4xl mb-2">👥</div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
+                          <Icon name="customers" size={24} />
+                        </div>
                         <p className="text-gray-500">No customers yet. Add your first customer.</p>
                       </td>
                     </tr>

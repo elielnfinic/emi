@@ -5,6 +5,7 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
+import { Icon } from '../components/ui/Icon'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Sale, Customer, StockItem } from '../types'
@@ -126,7 +127,9 @@ export function SalesPage() {
 
   if (!bid) return (
     <div className="text-center py-16">
-      <div className="text-5xl mb-4">🛒</div>
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
+        <Icon name="sales" size={28} />
+      </div>
       <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
       <p className="text-gray-500">Select a business to view sales.</p>
     </div>
@@ -135,7 +138,7 @@ export function SalesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Sales</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Sales</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
@@ -213,8 +216,8 @@ export function SalesPage() {
                       <p className="text-xs text-gray-500 text-right">Subtotal: {fmt(item.quantity * item.unitPrice, cur)}</p>
                     </div>
                   ))}
-                  <div className="bg-violet-50 rounded-lg p-3 text-right">
-                    <span className="text-sm font-semibold text-violet-700">Total: {fmt(runningTotal, cur)}</span>
+                  <div className="bg-emi-violet-light rounded-lg p-3 text-right">
+                    <span className="text-sm font-semibold text-emi-violet">Total: {fmt(runningTotal, cur)}</span>
                   </div>
                 </div>
               )}
@@ -257,7 +260,9 @@ export function SalesPage() {
                   )) : (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center">
-                        <div className="text-4xl mb-2">🛒</div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
+                          <Icon name="sales" size={24} />
+                        </div>
                         <p className="text-gray-500">No sales yet. Add your first sale.</p>
                       </td>
                     </tr>

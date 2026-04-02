@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
+import { Icon } from '../components/ui/Icon'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { StockItem } from '../types'
@@ -73,16 +74,18 @@ export function StockPage() {
 
   if (!bid) return (
     <div className="text-center py-16">
-      <div className="text-5xl mb-4">📦</div>
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-violet-light text-emi-violet mb-4">
+        <Icon name="stock" size={28} />
+      </div>
       <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
-      <p className="text-gray-500">Select a business to manage stock.</p>
+      <p className="text-gray-500">Select a business to manage inventory.</p>
     </div>
   )
   if (isLoading) return <Loader />
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Stock</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
@@ -138,8 +141,10 @@ export function StockPage() {
                   )) : (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center">
-                        <div className="text-4xl mb-2">📦</div>
-                        <p className="text-gray-500">No stock items yet. Add your first item.</p>
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-violet-light text-emi-violet mb-2">
+                          <Icon name="stock" size={24} />
+                        </div>
+                        <p className="text-gray-500">No items yet. Add your first item.</p>
                       </td>
                     </tr>
                   )}

@@ -14,7 +14,7 @@ export function Select({ label, error, options, placeholder, className = '', id,
       {label && <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
       <select
         id={selectId}
-        className={`w-full px-3 py-2 border rounded-lg text-sm border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:opacity-50 ${error ? 'border-red-500' : ''} ${className}`}
+        className={`w-full px-3 py-2 border rounded-lg text-sm border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-colors disabled:opacity-50 ${error ? 'border-red-500' : ''} ${className}`}
         {...props}
       >
         {placeholder && <option value="">{placeholder}</option>}

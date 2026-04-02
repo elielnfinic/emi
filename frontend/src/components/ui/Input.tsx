@@ -12,7 +12,7 @@ export function Input({ label, error, className = '', id, ...props }: InputProps
       {label && <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
       <input
         id={inputId}
-        className={`w-full px-3 py-2 border rounded-lg text-sm border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:opacity-50 ${error ? 'border-red-500' : ''} ${className}`}
+        className={`w-full px-3 py-2 border rounded-lg text-sm border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-colors disabled:opacity-50 ${error ? 'border-red-500' : ''} ${className}`}
         {...props}
       />
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
