@@ -156,6 +156,37 @@ export interface DashboardData {
   recentSales: Sale[]
 }
 
+export interface Rotation {
+  id: number
+  businessId: number
+  name: string
+  status: string
+  startDate: string
+  endDate: string | null
+  initialCapital: number
+  closedAt: string | null
+  closedBy: number | null
+  notes: string | null
+  business?: Business
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface BusinessUser {
+  id: number
+  businessId: number
+  userId: number
+  roleId: number
+  isActive: boolean
+  user?: User
+  role?: { id: number; name: string; displayName: string }
+  createdAt: string
+}
+
+export interface ReportSummary {
+  [key: string]: number | string
+}
+
 export interface AuthResponse {
   user: User
   token: string

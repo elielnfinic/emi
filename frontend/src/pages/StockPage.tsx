@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { Modal } from '../components/ui/Modal'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { useAppStore } from '../stores'
@@ -14,7 +13,6 @@ export function StockPage() {
   const bid = currentBusiness?.id
   const queryClient = useQueryClient()
 
-  const [showModal, setShowModal] = useState(false)
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
   const [unit, setUnit] = useState('')
@@ -44,7 +42,6 @@ export function StockPage() {
   })
 
   const resetForm = () => {
-    setShowModal(false)
     setName('')
     setSku('')
     setUnit('')
@@ -85,76 +82,73 @@ export function StockPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Stock</h1>
-        <Button onClick={() => setShowModal(true)}>+ New Item</Button>
-      </div>
+      <h1 className="text-2xl font-semibold text-gray-900">Stock</h1>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {data?.length ? data.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                <td className="px-6 py-4 text-gray-500">{item.sku || '-'}</td>
-                <td className={`px-6 py-4 font-medium ${item.quantity <= item.minQuantity ? 'text-red-600' : 'text-gray-900'}`}>{item.quantity}</td>
-                <td className="px-6 py-4 text-gray-500">{item.unit}</td>
-                <td className="px-6 py-4 text-gray-900">{item.sellingPrice != null ? `$${item.sellingPrice}` : '-'}</td>
-                <td className="px-6 py-4">
-                  {item.quantity <= item.minQuantity
-                    ? <Badge variant="danger">Low stock</Badge>
-                    : <Badge variant="success">In stock</Badge>
-                  }
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>Delete</Button>
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center">
-                  <div className="text-4xl mb-2">📦</div>
-                  <p className="text-gray-500">No stock items yet. Add your first item.</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Item</h3>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Product name" />
+              <Input label="SKU" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="ABC-123" />
+              <Input label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} required placeholder="pcs, kg, etc." />
+              <Input label="Quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
+              <Input label="Purchase Price" type="number" step="0.01" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} placeholder="0.00" />
+              <Input label="Selling Price" type="number" step="0.01" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} placeholder="0.00" />
+              <Input label="Min Quantity (Alert)" type="number" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} placeholder="0" />
+              <Input label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+              <Button type="submit" className="w-full" loading={createMutation.isPending}>Add Item</Button>
+            </form>
+          </div>
+        </div>
 
-      <Modal isOpen={showModal} onClose={resetForm} title="New Stock Item">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Product name" />
-            <Input label="SKU" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="ABC-123" />
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {data?.length ? data.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                      <td className="px-6 py-4 text-gray-500">{item.sku || '-'}</td>
+                      <td className={`px-6 py-4 font-medium ${item.quantity <= item.minQuantity ? 'text-red-600' : 'text-gray-900'}`}>{item.quantity}</td>
+                      <td className="px-6 py-4 text-gray-500">{item.unit}</td>
+                      <td className="px-6 py-4 text-gray-900">{item.sellingPrice != null ? `$${item.sellingPrice}` : '-'}</td>
+                      <td className="px-6 py-4">
+                        {item.quantity <= item.minQuantity
+                          ? <Badge variant="danger">Low stock</Badge>
+                          : <Badge variant="success">In stock</Badge>
+                        }
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>Delete</Button>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="text-4xl mb-2">📦</div>
+                        <p className="text-gray-500">No stock items yet. Add your first item.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} required placeholder="pcs, kg, etc." />
-            <Input label="Quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Purchase Price" type="number" step="0.01" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} placeholder="0.00" />
-            <Input label="Selling Price" type="number" step="0.01" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} placeholder="0.00" />
-          </div>
-          <Input label="Min Quantity (Alert)" type="number" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} placeholder="0" />
-          <Input label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>
-            <Button type="submit" loading={createMutation.isPending}>Create Item</Button>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      </div>
     </div>
   )
 }

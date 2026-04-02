@@ -45,14 +45,16 @@ export function AppLayout() {
     { to: '/dashboard', label: 'Dashboard', icon: '📊' },
     { to: '/transactions', label: 'Transactions', icon: '💰' },
     { to: '/sales', label: 'Sales', icon: '🛒' },
+    { to: '/rotations', label: 'Rotations', icon: '🔄' },
     { to: '/stock', label: 'Stock', icon: '📦' },
     { to: '/customers', label: 'Customers', icon: '👥' },
     { to: '/suppliers', label: 'Suppliers', icon: '🏭' },
+    { to: '/reports', label: 'Reports', icon: '📋' },
   ]
 
   const managementItems = [
     { to: '/businesses', label: 'Businesses', icon: '🏢' },
-    { to: '/organizations', label: 'Organizations', icon: '🏛️' },
+    { to: '/users', label: 'Users', icon: '👤' },
   ]
 
   return (
