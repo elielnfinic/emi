@@ -57,21 +57,28 @@ export function BusinessesPage() {
     setPhone('')
   }
 
+  const [error, setError] = useState('')
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    let resolvedOrgId = orgId
-    if (!resolvedOrgId) {
-      const res = await createOrgMutation.mutateAsync({ name })
-      resolvedOrgId = (res.data as Organization).id
+    setError('')
+    try {
+      let resolvedOrgId = orgId
+      if (!resolvedOrgId) {
+        const res = await createOrgMutation.mutateAsync({ name })
+        resolvedOrgId = (res.data as Organization).id
+      }
+      createMutation.mutate({
+        organizationId: resolvedOrgId,
+        name,
+        type,
+        currency,
+        address: address || undefined,
+        phone: phone || undefined,
+      })
+    } catch {
+      setError('Failed to create business. Please try again.')
     }
-    createMutation.mutate({
-      organizationId: resolvedOrgId,
-      name,
-      type,
-      currency,
-      address: address || undefined,
-      phone: phone || undefined,
-    })
   }
 
   const handleDelete = (id: number) => {
@@ -91,6 +98,9 @@ export function BusinessesPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Business</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
+              )}
               <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="My Business" />
               <Select
                 label="Type"
