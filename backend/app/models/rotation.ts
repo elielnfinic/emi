@@ -4,6 +4,7 @@ import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Business from '#models/business'
 import Transaction from '#models/transaction'
 import Sale from '#models/sale'
+import StockMovement from '#models/stock_movement'
 
 export default class Rotation extends BaseModel {
   @column({ isPrimary: true })
@@ -50,4 +51,7 @@ export default class Rotation extends BaseModel {
 
   @hasMany(() => Sale)
   declare sales: HasMany<typeof Sale>
+
+  @hasMany(() => StockMovement)
+  declare stockMovements: HasMany<typeof StockMovement>
 }

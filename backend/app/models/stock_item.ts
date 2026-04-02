@@ -24,6 +24,9 @@ export default class StockItem extends BaseModel {
   declare unit: string
 
   @column()
+  declare category: string | null
+
+  @column()
   declare purchasePrice: number | null
 
   @column()
