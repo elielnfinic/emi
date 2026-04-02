@@ -8,7 +8,9 @@ import { TransactionsPage } from './pages/TransactionsPage'
 import { SalesPage } from './pages/SalesPage'
 import { StockPage } from './pages/StockPage'
 import { CustomersPage } from './pages/CustomersPage'
+import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { SuppliersPage } from './pages/SuppliersPage'
+import { SupplierDetailPage } from './pages/SupplierDetailPage'
 import { BusinessesPage } from './pages/BusinessesPage'
 import { RotationsPage } from './pages/RotationsPage'
 import { ReportsPage } from './pages/ReportsPage'
@@ -45,7 +47,9 @@ export default function App() {
             <Route path="rotations" element={<RotationsPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="customers" element={<CustomersPage />} />
+            <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
+            <Route path="suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="businesses" element={<BusinessesPage />} />
             <Route path="users" element={<UsersPage />} />

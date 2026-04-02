@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
@@ -24,6 +25,12 @@ export function UsersPage() {
   const [userId, setUserId] = useState('')
   const [roleId, setRoleId] = useState('3')
 
+  // Create new user form state
+  const [newFullName, setNewFullName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [createError, setCreateError] = useState('')
+
   const { data: businessUsers, isLoading } = useQuery<BusinessUser[]>({
     queryKey: ['business-users', bid],
     queryFn: async () => (await api.get('/business-users', { params: { business_id: bid } })).data,
@@ -36,11 +43,25 @@ export function UsersPage() {
     enabled: !!bid,
   })
 
-  const createMutation = useMutation({
+  const assignMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => api.post('/business-users', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business-users', bid] })
-      resetForm()
+      resetAssignForm()
+    },
+  })
+
+  const createUserMutation = useMutation({
+    mutationFn: (payload: { fullName: string; email: string; password: string }) =>
+      api.post('/business-users/create-user', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users'] })
+      resetCreateForm()
+      setCreateError('')
+    },
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { errors?: { message: string }[] } } }
+      setCreateError(error.response?.data?.errors?.[0]?.message || 'Failed to create user.')
     },
   })
 
@@ -49,17 +70,33 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['business-users', bid] }),
   })
 
-  const resetForm = () => {
+  const resetAssignForm = () => {
     setUserId('')
     setRoleId('3')
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const resetCreateForm = () => {
+    setNewFullName('')
+    setNewEmail('')
+    setNewPassword('')
+  }
+
+  const handleAssignSubmit = (e: FormEvent) => {
     e.preventDefault()
-    createMutation.mutate({
+    assignMutation.mutate({
       businessId: bid,
       userId: Number(userId),
       roleId: Number(roleId),
+    })
+  }
+
+  const handleCreateUser = (e: FormEvent) => {
+    e.preventDefault()
+    setCreateError('')
+    createUserMutation.mutate({
+      fullName: newFullName,
+      email: newEmail,
+      password: newPassword,
     })
   }
 
@@ -83,10 +120,27 @@ export function UsersPage() {
       <h1 className="text-2xl font-bold text-gray-900">Team</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
+          {/* Create New User */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New User</h3>
+            <form onSubmit={handleCreateUser} className="space-y-3">
+              {createError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{createError}</div>
+              )}
+              <Input label="Full Name" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} placeholder="John Doe" required />
+              <Input label="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" required />
+              <Input label="Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" required />
+              <Button type="submit" className="w-full" loading={createUserMutation.isPending}>
+                Create User
+              </Button>
+            </form>
+          </div>
+
+          {/* Assign User to Business */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Add User to Business</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleAssignSubmit} className="space-y-3">
               <Select
                 label="User"
                 value={userId}
@@ -101,7 +155,7 @@ export function UsersPage() {
                 onChange={(e) => setRoleId(e.target.value)}
                 options={ROLES}
               />
-              <Button type="submit" className="w-full" loading={createMutation.isPending} disabled={!userId}>
+              <Button type="submit" className="w-full" loading={assignMutation.isPending} disabled={!userId}>
                 Add User
               </Button>
             </form>

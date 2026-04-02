@@ -114,6 +114,7 @@ router
         router.get('business-users/users', [BusinessUsersController, 'users'])
         router.get('business-users', [BusinessUsersController, 'index'])
         router.post('business-users', [BusinessUsersController, 'store'])
+        router.post('business-users/create-user', [BusinessUsersController, 'createUser'])
         router.delete('business-users/:id', [BusinessUsersController, 'destroy'])
 
         // Reports

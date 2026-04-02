@@ -10,10 +10,12 @@ import { DateTime } from 'luxon'
 export default class SalesController {
   async index({ request }: HttpContext) {
     const businessId = request.input('business_id')
+    const customerId = request.input('customer_id')
     const type = request.input('type')
     const status = request.input('status')
-    const query = Sale.query().preload('customer').preload('user').preload('items')
+    const query = Sale.query().preload('customer').preload('user').preload('items').preload('payments')
     if (businessId) query.where('businessId', businessId)
+    if (customerId) query.where('customerId', customerId)
     if (type) query.where('type', type)
     if (status) query.where('status', status)
     return await query.orderBy('date', 'desc')

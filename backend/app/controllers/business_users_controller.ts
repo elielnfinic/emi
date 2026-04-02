@@ -11,6 +11,14 @@ const addUserValidator = vine.compile(
   })
 )
 
+const createUserValidator = vine.compile(
+  vine.object({
+    fullName: vine.string().nullable(),
+    email: vine.string().email().maxLength(254),
+    password: vine.string().minLength(8).maxLength(32),
+  })
+)
+
 export default class BusinessUsersController {
   async index({ request }: HttpContext) {
     const businessId = request.input('business_id')
@@ -40,5 +48,11 @@ export default class BusinessUsersController {
     const bu = await BusinessUser.findOrFail(params.id)
     await bu.delete()
     return { message: 'User removed from business' }
+  }
+
+  async createUser({ request }: HttpContext) {
+    const data = await request.validateUsing(createUserValidator)
+    const user = await User.create(data)
+    return user
   }
 }

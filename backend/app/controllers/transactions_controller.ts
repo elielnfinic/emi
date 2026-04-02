@@ -7,12 +7,16 @@ export default class TransactionsController {
   async index({ request }: HttpContext) {
     const businessId = request.input('business_id')
     const type = request.input('type')
+    const beneficiary = request.input('beneficiary')
     const query = Transaction.query().preload('category').preload('user')
     if (businessId) {
       query.where('businessId', businessId)
     }
     if (type) {
       query.where('type', type)
+    }
+    if (beneficiary) {
+      query.where('beneficiary', beneficiary)
     }
     const transactions = await query.orderBy('date', 'desc')
     return transactions
