@@ -15,6 +15,14 @@ export default class BusinessesController {
 
   async store({ request }: HttpContext) {
     const data = await request.validateUsing(createBusinessValidator)
+    if (!data.slug) {
+      data.slug = data.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+    }
     const business = await Business.create(data)
     await business.load('organization')
     return business

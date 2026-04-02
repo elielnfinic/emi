@@ -10,6 +10,14 @@ export default class OrganizationsController {
 
   async store({ request }: HttpContext) {
     const data = await request.validateUsing(createOrganizationValidator)
+    if (!data.slug) {
+      data.slug = data.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+    }
     const organization = await Organization.create(data)
     return organization
   }
