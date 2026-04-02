@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { SalesPage } from './pages/SalesPage'
 import { StockPage } from './pages/StockPage'
+import { ProductDetailPage } from './pages/ProductDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { SuppliersPage } from './pages/SuppliersPage'
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="sales" element={<SalesPage />} />
             <Route path="rotations" element={<RotationsPage />} />
             <Route path="stock" element={<StockPage />} />
+            <Route path="stock/:id" element={<ProductDetailPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />

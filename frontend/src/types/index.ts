@@ -76,11 +76,33 @@ export interface StockItem {
   sku: string | null
   description: string | null
   unit: string
+  category: string | null
   purchasePrice: number | null
   sellingPrice: number | null
   quantity: number
   minQuantity: number
   isActive: boolean
+  movements?: StockTransaction[]
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface StockTransaction {
+  id: number
+  stockItemId: number
+  businessId: number
+  userId: number
+  type: 'in' | 'out' | 'adjustment'
+  quantity: number
+  unitPrice: number | null
+  reason: string | null
+  reference: string | null
+  date: string
+  notes: string | null
+  rotationId: number | null
+  supplierId: number | null
+  stockItem?: StockItem
+  user?: User
   createdAt: string
   updatedAt: string | null
 }

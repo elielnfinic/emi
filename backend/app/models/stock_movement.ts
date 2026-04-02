@@ -4,6 +4,8 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import StockItem from '#models/stock_item'
 import Business from '#models/business'
 import User from '#models/user'
+import Rotation from '#models/rotation'
+import Supplier from '#models/supplier'
 
 export default class StockMovement extends BaseModel {
   @column({ isPrimary: true })
@@ -39,6 +41,12 @@ export default class StockMovement extends BaseModel {
   @column()
   declare notes: string | null
 
+  @column()
+  declare rotationId: number | null
+
+  @column()
+  declare supplierId: number | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
@@ -53,4 +61,10 @@ export default class StockMovement extends BaseModel {
 
   @belongsTo(() => User)
   declare user: BelongsTo<typeof User>
+
+  @belongsTo(() => Rotation)
+  declare rotation: BelongsTo<typeof Rotation>
+
+  @belongsTo(() => Supplier)
+  declare supplier: BelongsTo<typeof Supplier>
 }

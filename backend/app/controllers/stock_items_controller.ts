@@ -7,6 +7,7 @@ export default class StockItemsController {
   async index(ctx: HttpContext) {
     const businessId = ctx.request.input('business_id')
     const search = ctx.request.input('search', '')
+    const category = ctx.request.input('category', '')
     const page = ctx.request.input('page', 1)
     const perPage = ctx.request.input('per_page', 20)
     await verifyBusinessAccess(ctx, businessId)
@@ -18,6 +19,9 @@ export default class StockItemsController {
         q.whereILike('name', `%${search}%`)
           .orWhereILike('sku', `%${search}%`)
       })
+    }
+    if (category) {
+      query.where('category', category)
     }
     return await query.paginate(page, perPage)
   }
@@ -32,7 +36,7 @@ export default class StockItemsController {
   async show(ctx: HttpContext) {
     const item = await StockItem.query()
       .where('id', ctx.params.id)
-      .preload('movements')
+      .preload('movements', (q) => q.orderBy('date', 'desc').orderBy('createdAt', 'desc'))
       .firstOrFail()
     await verifyBusinessAccess(ctx, item.businessId)
     return item
@@ -52,5 +56,16 @@ export default class StockItemsController {
     await verifyBusinessAccess(ctx, item.businessId, ['admin', 'manager'])
     await item.delete()
     return { message: 'Stock item deleted successfully' }
+  }
+
+  async categories(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    await verifyBusinessAccess(ctx, businessId)
+    const items = await StockItem.query()
+      .where('businessId', businessId)
+      .whereNotNull('category')
+      .select('category')
+      .groupBy('category')
+    return items.map((i) => i.category).filter(Boolean)
   }
 }

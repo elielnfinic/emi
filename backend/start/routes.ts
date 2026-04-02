@@ -15,6 +15,7 @@ const OrganizationsController = () => import('#controllers/organizations_control
 const BusinessesController = () => import('#controllers/businesses_controller')
 const TransactionsController = () => import('#controllers/transactions_controller')
 const StockItemsController = () => import('#controllers/stock_items_controller')
+const StockTransactionsController = () => import('#controllers/stock_transactions_controller')
 const CustomersController = () => import('#controllers/customers_controller')
 const SuppliersController = () => import('#controllers/suppliers_controller')
 const SalesController = () => import('#controllers/sales_controller')
@@ -77,11 +78,20 @@ router
         router.delete('transactions/:id', [TransactionsController, 'destroy'])
 
         // Stock Items CRUD
+        router.get('stock-items/categories', [StockItemsController, 'categories'])
         router.get('stock-items', [StockItemsController, 'index'])
         router.post('stock-items', [StockItemsController, 'store'])
         router.get('stock-items/:id', [StockItemsController, 'show'])
         router.put('stock-items/:id', [StockItemsController, 'update'])
         router.delete('stock-items/:id', [StockItemsController, 'destroy'])
+
+        // Stock Transactions CRUD
+        router.get('stock-transactions', [StockTransactionsController, 'index'])
+        router.post('stock-transactions', [StockTransactionsController, 'store'])
+        router.post('stock-transactions/bulk-move-rotation', [StockTransactionsController, 'bulkMoveRotation'])
+        router.get('stock-transactions/:id', [StockTransactionsController, 'show'])
+        router.put('stock-transactions/:id', [StockTransactionsController, 'update'])
+        router.delete('stock-transactions/:id', [StockTransactionsController, 'destroy'])
 
         // Customers CRUD
         router.get('customers', [CustomersController, 'index'])
