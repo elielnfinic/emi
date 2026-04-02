@@ -29,16 +29,15 @@ export default class BusinessesController {
       return response.forbidden({ error: 'You can only create businesses in your organization' })
     }
 
-    // If user has an org, check they are an admin
+    // Only admins can create businesses
     if (orgId) {
       const admin = await isOrgAdmin(user.id, orgId)
       if (!admin) {
-        // Allow if this is the first business (bootstrapping)
-        const existingBusinesses = await Business.query().where('organizationId', orgId)
-        if (existingBusinesses.length > 0) {
-          return response.forbidden({ error: 'Only admins can create new businesses' })
-        }
+        return response.forbidden({ error: 'Only admins can create new businesses' })
       }
+    } else {
+      // User has no org — they cannot create businesses
+      return response.forbidden({ error: 'You must be assigned to an organization to create businesses' })
     }
 
     if (!data.slug) {
