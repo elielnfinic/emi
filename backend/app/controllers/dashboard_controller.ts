@@ -2,15 +2,18 @@ import Transaction from '#models/transaction'
 import Sale from '#models/sale'
 import StockItem from '#models/stock_item'
 import Customer from '#models/customer'
+import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
 export default class DashboardController {
-  async show({ request }: HttpContext) {
-    const businessId = request.input('business_id')
+  async show(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
     if (!businessId) {
       return { error: 'business_id is required' }
     }
+
+    await verifyBusinessAccess(ctx, businessId)
 
     const today = DateTime.now().toISODate()
     const startOfMonth = DateTime.now().startOf('month').toISODate()

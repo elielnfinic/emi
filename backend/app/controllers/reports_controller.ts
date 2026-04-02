@@ -1,13 +1,16 @@
 import Transaction from '#models/transaction'
 import Sale from '#models/sale'
 import StockItem from '#models/stock_item'
+import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class ReportsController {
-  async salesReport({ request }: HttpContext) {
-    const businessId = request.input('business_id')
-    const from = request.input('from')
-    const to = request.input('to')
+  async salesReport(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    const from = ctx.request.input('from')
+    const to = ctx.request.input('to')
+
+    await verifyBusinessAccess(ctx, businessId, ['admin', 'manager'])
 
     const query = Sale.query()
       .where('businessId', businessId)
@@ -39,10 +42,12 @@ export default class ReportsController {
     }
   }
 
-  async transactionsReport({ request }: HttpContext) {
-    const businessId = request.input('business_id')
-    const from = request.input('from')
-    const to = request.input('to')
+  async transactionsReport(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    const from = ctx.request.input('from')
+    const to = ctx.request.input('to')
+
+    await verifyBusinessAccess(ctx, businessId, ['admin', 'manager'])
 
     const query = Transaction.query()
       .where('businessId', businessId)
@@ -70,8 +75,9 @@ export default class ReportsController {
     }
   }
 
-  async stockReport({ request }: HttpContext) {
-    const businessId = request.input('business_id')
+  async stockReport(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    await verifyBusinessAccess(ctx, businessId, ['admin', 'manager', 'stock'])
     const items = await StockItem.query()
       .where('businessId', businessId)
       .orderBy('name', 'asc')

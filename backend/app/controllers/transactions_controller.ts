@@ -1,17 +1,19 @@
 import Transaction from '#models/transaction'
 import { createTransactionValidator, updateTransactionValidator } from '#validators/transaction'
+import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 import { DateTime } from 'luxon'
 
 export default class TransactionsController {
-  async index({ request }: HttpContext) {
-    const businessId = request.input('business_id')
-    const type = request.input('type')
-    const beneficiary = request.input('beneficiary')
-    const query = Transaction.query().preload('category').preload('user')
-    if (businessId) {
-      query.where('businessId', businessId)
-    }
+  async index(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    const type = ctx.request.input('type')
+    const beneficiary = ctx.request.input('beneficiary')
+    await verifyBusinessAccess(ctx, businessId)
+    const query = Transaction.query()
+      .where('businessId', businessId)
+      .preload('category')
+      .preload('user')
     if (type) {
       query.where('type', type)
     }
@@ -22,9 +24,10 @@ export default class TransactionsController {
     return transactions
   }
 
-  async store({ request, auth }: HttpContext) {
-    const user = auth.getUserOrFail()
-    const data = await request.validateUsing(createTransactionValidator)
+  async store(ctx: HttpContext) {
+    const user = ctx.auth.getUserOrFail()
+    const data = await ctx.request.validateUsing(createTransactionValidator)
+    await verifyBusinessAccess(ctx, data.businessId, ['admin', 'manager'])
 
     const lastTx = await Transaction.query()
       .where('businessId', data.businessId)
@@ -47,19 +50,21 @@ export default class TransactionsController {
     return transaction
   }
 
-  async show({ params }: HttpContext) {
+  async show(ctx: HttpContext) {
     const transaction = await Transaction.query()
-      .where('id', params.id)
+      .where('id', ctx.params.id)
       .preload('category')
       .preload('user')
       .preload('attachments')
       .firstOrFail()
+    await verifyBusinessAccess(ctx, transaction.businessId)
     return transaction
   }
 
-  async update({ params, request }: HttpContext) {
-    const transaction = await Transaction.findOrFail(params.id)
-    const data = await request.validateUsing(updateTransactionValidator)
+  async update(ctx: HttpContext) {
+    const transaction = await Transaction.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, transaction.businessId, ['admin', 'manager'])
+    const data = await ctx.request.validateUsing(updateTransactionValidator)
     const mergeData: Record<string, unknown> = { ...data }
     if (data.date) {
       mergeData.date = DateTime.fromISO(data.date)
@@ -71,8 +76,9 @@ export default class TransactionsController {
     return transaction
   }
 
-  async destroy({ params }: HttpContext) {
-    const transaction = await Transaction.findOrFail(params.id)
+  async destroy(ctx: HttpContext) {
+    const transaction = await Transaction.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, transaction.businessId, ['admin', 'manager'])
     await transaction.delete()
     return { message: 'Transaction deleted successfully' }
   }
