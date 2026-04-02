@@ -6,11 +6,21 @@ import type { HttpContext } from '@adonisjs/core/http'
 export default class SuppliersController {
   async index(ctx: HttpContext) {
     const businessId = ctx.request.input('business_id')
+    const search = ctx.request.input('search', '')
+    const page = ctx.request.input('page', 1)
+    const perPage = ctx.request.input('per_page', 20)
     await verifyBusinessAccess(ctx, businessId)
-    const suppliers = await Supplier.query()
+    const query = Supplier.query()
       .where('businessId', businessId)
       .orderBy('name', 'asc')
-    return suppliers
+    if (search) {
+      query.where((q) => {
+        q.whereILike('name', `%${search}%`)
+          .orWhereILike('email', `%${search}%`)
+          .orWhereILike('phone', `%${search}%`)
+      })
+    }
+    return await query.paginate(page, perPage)
   }
 
   async store(ctx: HttpContext) {

@@ -14,6 +14,9 @@ export default class SalesController {
     const customerId = ctx.request.input('customer_id')
     const type = ctx.request.input('type')
     const status = ctx.request.input('status')
+    const search = ctx.request.input('search', '')
+    const page = ctx.request.input('page', 1)
+    const perPage = ctx.request.input('per_page', 20)
     await verifyBusinessAccess(ctx, businessId)
     const query = Sale.query()
       .where('businessId', businessId)
@@ -24,7 +27,15 @@ export default class SalesController {
     if (customerId) query.where('customerId', customerId)
     if (type) query.where('type', type)
     if (status) query.where('status', status)
-    return await query.orderBy('date', 'desc')
+    if (search) {
+      query.where((q) => {
+        q.whereILike('reference', `%${search}%`)
+          .orWhereHas('customer', (cq) => {
+            cq.whereILike('name', `%${search}%`)
+          })
+      })
+    }
+    return await query.orderBy('date', 'desc').paginate(page, perPage)
   }
 
   async store(ctx: HttpContext) {

@@ -1,13 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
 import { Icon } from '../components/ui/Icon'
+import { Pagination } from '../components/ui/Pagination'
 import { useAppStore } from '../stores'
 import api from '../services/api'
-import type { Customer } from '../types'
+import type { Customer, PaginatedResponse } from '../types'
 
 export function CustomersPage() {
   const { currentBusiness } = useAppStore()
@@ -20,9 +21,16 @@ export function CustomersPage() {
   const [address, setAddress] = useState('')
   const [notes, setNotes] = useState('')
 
-  const { data, isLoading } = useQuery<Customer[]>({
-    queryKey: ['customers', bid],
-    queryFn: async () => (await api.get('/customers', { params: { business_id: bid } })).data,
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('search') ?? ''
+  const page = Number(searchParams.get('page') ?? '1')
+  const [inputValue, setInputValue] = useState(search)
+
+  useEffect(() => { setInputValue(search) }, [search])
+
+  const { data, isLoading } = useQuery<PaginatedResponse<Customer>>({
+    queryKey: ['customers', bid, search, page],
+    queryFn: async () => (await api.get('/customers', { params: { business_id: bid, search, page } })).data,
     enabled: !!bid,
   })
 
@@ -63,6 +71,25 @@ export function CustomersPage() {
     if (window.confirm('Delete this customer?')) deleteMutation.mutate(id)
   }
 
+  const applySearch = (e: FormEvent) => {
+    e.preventDefault()
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (inputValue.trim()) next.set('search', inputValue.trim())
+      else next.delete('search')
+      next.set('page', '1')
+      return next
+    })
+  }
+
+  const handlePageChange = (p: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('page', String(p))
+      return next
+    })
+  }
+
   if (!bid) return (
     <div className="text-center py-16">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
@@ -73,6 +100,9 @@ export function CustomersPage() {
     </div>
   )
   if (isLoading) return <Loader />
+
+  const customers = data?.data ?? []
+  const meta = data?.meta
 
   return (
     <div className="space-y-6">
@@ -95,6 +125,16 @@ export function CustomersPage() {
 
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <form onSubmit={applySearch} className="flex gap-2">
+                <Input
+                  placeholder="Search by name, email or phone…"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                />
+                <Button type="submit" variant="secondary">Search</Button>
+              </form>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -107,7 +147,7 @@ export function CustomersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {data?.length ? data.map((c) => (
+                  {customers.length ? customers.map((c) => (
                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900">
                         <Link to={`/customers/${c.id}`} className="text-emi-violet hover:underline">{c.name}</Link>
@@ -125,13 +165,14 @@ export function CustomersPage() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
                           <Icon name="customers" size={24} />
                         </div>
-                        <p className="text-gray-500">No customers yet. Add your first customer.</p>
+                        <p className="text-gray-500">{search ? 'No customers match your search.' : 'No customers yet. Add your first customer.'}</p>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
           </div>
         </div>
       </div>

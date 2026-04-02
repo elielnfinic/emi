@@ -1,14 +1,16 @@
-import { useState, Fragment, type FormEvent } from 'react'
+import { useState, useEffect, Fragment, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
+import { Pagination } from '../components/ui/Pagination'
 import { useAppStore } from '../stores'
 import api from '../services/api'
-import type { Sale, Customer, StockItem } from '../types'
+import type { Sale, Customer, StockItem, PaginatedResponse } from '../types'
 
 function fmt(n: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n)
@@ -51,21 +53,34 @@ export function SalesPage() {
   const [payDate, setPayDate] = useState('')
   const [payNotes, setPayNotes] = useState('')
 
-  const { data, isLoading } = useQuery<Sale[]>({
-    queryKey: ['sales', bid],
-    queryFn: async () => (await api.get('/sales', { params: { business_id: bid } })).data,
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('search') ?? ''
+  const page = Number(searchParams.get('page') ?? '1')
+  const [inputValue, setInputValue] = useState(search)
+
+  useEffect(() => { setInputValue(search) }, [search])
+
+  const { data, isLoading } = useQuery<PaginatedResponse<Sale>>({
+    queryKey: ['sales', bid, search, page],
+    queryFn: async () => (await api.get('/sales', { params: { business_id: bid, search, page } })).data,
     enabled: !!bid,
   })
 
   const { data: customers } = useQuery<Customer[]>({
     queryKey: ['customers', bid],
-    queryFn: async () => (await api.get('/customers', { params: { business_id: bid } })).data,
+    queryFn: async () => {
+      const res = await api.get('/customers', { params: { business_id: bid, per_page: 500 } })
+      return res.data.data
+    },
     enabled: !!bid,
   })
 
   const { data: stockItems } = useQuery<StockItem[]>({
     queryKey: ['stock-items', bid],
-    queryFn: async () => (await api.get('/stock-items', { params: { business_id: bid } })).data,
+    queryFn: async () => {
+      const res = await api.get('/stock-items', { params: { business_id: bid, per_page: 500 } })
+      return res.data.data
+    },
     enabled: !!bid,
   })
 
@@ -202,6 +217,25 @@ export function SalesPage() {
     if (window.confirm('Delete this sale?')) deleteMutation.mutate(id)
   }
 
+  const applySearch = (e: FormEvent) => {
+    e.preventDefault()
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (inputValue.trim()) next.set('search', inputValue.trim())
+      else next.delete('search')
+      next.set('page', '1')
+      return next
+    })
+  }
+
+  const handlePageChange = (p: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('page', String(p))
+      return next
+    })
+  }
+
   if (!bid) return (
     <div className="text-center py-16">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
@@ -212,6 +246,9 @@ export function SalesPage() {
     </div>
   )
   if (isLoading) return <Loader />
+
+  const sales = data?.data ?? []
+  const meta = data?.meta
 
   return (
     <div className="space-y-6">
@@ -369,6 +406,16 @@ export function SalesPage() {
 
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <form onSubmit={applySearch} className="flex gap-2">
+                <Input
+                  placeholder="Search by reference or customer name…"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                />
+                <Button type="submit" variant="secondary">Search</Button>
+              </form>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -383,7 +430,7 @@ export function SalesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {data?.length ? data.map((s) => {
+                  {sales.length ? sales.map((s) => {
                     const actualPaid = s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount)
                     const remaining = Number(s.totalAmount) - actualPaid
                     const isPending = s.type === 'credit' && s.status !== 'completed'
@@ -518,13 +565,14 @@ export function SalesPage() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
                           <Icon name="sales" size={24} />
                         </div>
-                        <p className="text-gray-500">No sales yet. Add your first sale.</p>
+                        <p className="text-gray-500">{search ? 'No sales match your search.' : 'No sales yet. Add your first sale.'}</p>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
           </div>
         </div>
       </div>
