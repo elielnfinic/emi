@@ -9,6 +9,8 @@ import { SalesPage } from './pages/SalesPage'
 import { StockPage } from './pages/StockPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { SuppliersPage } from './pages/SuppliersPage'
+import { BusinessesPage } from './pages/BusinessesPage'
+import { OrganizationsPage } from './pages/OrganizationsPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -41,6 +43,8 @@ export default function App() {
             <Route path="stock" element={<StockPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
+            <Route path="businesses" element={<BusinessesPage />} />
+            <Route path="organizations" element={<OrganizationsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
