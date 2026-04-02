@@ -68,4 +68,22 @@ export interface ApiDefinition {
     addPayment: typeof routes['sales.add_payment']
     destroy: typeof routes['sales.destroy']
   }
+  rotations: {
+    index: typeof routes['rotations.index']
+    store: typeof routes['rotations.store']
+    show: typeof routes['rotations.show']
+    close: typeof routes['rotations.close']
+    destroy: typeof routes['rotations.destroy']
+  }
+  businessUsers: {
+    users: typeof routes['business_users.users']
+    index: typeof routes['business_users.index']
+    store: typeof routes['business_users.store']
+    destroy: typeof routes['business_users.destroy']
+  }
+  reports: {
+    salesReport: typeof routes['reports.sales_report']
+    transactionsReport: typeof routes['reports.transactions_report']
+    stockReport: typeof routes['reports.stock_report']
+  }
 }

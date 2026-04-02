@@ -5,17 +5,17 @@
 
 export const controllers = {
   AccessToken: () => import('#controllers/access_token_controller'),
-  BusinessUsers: () => import('#controllers/business_users_controller'),
   Businesses: () => import('#controllers/businesses_controller'),
   Customers: () => import('#controllers/customers_controller'),
   Dashboard: () => import('#controllers/dashboard_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
   Organizations: () => import('#controllers/organizations_controller'),
   Profile: () => import('#controllers/profile_controller'),
-  Reports: () => import('#controllers/reports_controller'),
-  Rotations: () => import('#controllers/rotations_controller'),
   Sales: () => import('#controllers/sales_controller'),
   StockItems: () => import('#controllers/stock_items_controller'),
   Suppliers: () => import('#controllers/suppliers_controller'),
   Transactions: () => import('#controllers/transactions_controller'),
+  BusinessUsers: () => import('#controllers/business_users_controller'),
+  Reports: () => import('#controllers/reports_controller'),
+  Rotations: () => import('#controllers/rotations_controller'),
 }

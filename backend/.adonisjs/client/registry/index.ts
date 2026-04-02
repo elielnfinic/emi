@@ -246,6 +246,78 @@ const routes = {
     tokens: [{"old":"/api/v1/sales/:id","type":0,"val":"api","end":""},{"old":"/api/v1/sales/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/sales/:id","type":0,"val":"sales","end":""},{"old":"/api/v1/sales/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['sales.destroy']['types'],
   },
+  'rotations.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/rotations',
+    tokens: [{"old":"/api/v1/rotations","type":0,"val":"api","end":""},{"old":"/api/v1/rotations","type":0,"val":"v1","end":""},{"old":"/api/v1/rotations","type":0,"val":"rotations","end":""}],
+    types: placeholder as Registry['rotations.index']['types'],
+  },
+  'rotations.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/rotations',
+    tokens: [{"old":"/api/v1/rotations","type":0,"val":"api","end":""},{"old":"/api/v1/rotations","type":0,"val":"v1","end":""},{"old":"/api/v1/rotations","type":0,"val":"rotations","end":""}],
+    types: placeholder as Registry['rotations.store']['types'],
+  },
+  'rotations.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/rotations/:id',
+    tokens: [{"old":"/api/v1/rotations/:id","type":0,"val":"api","end":""},{"old":"/api/v1/rotations/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/rotations/:id","type":0,"val":"rotations","end":""},{"old":"/api/v1/rotations/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['rotations.show']['types'],
+  },
+  'rotations.close': {
+    methods: ["POST"],
+    pattern: '/api/v1/rotations/:id/close',
+    tokens: [{"old":"/api/v1/rotations/:id/close","type":0,"val":"api","end":""},{"old":"/api/v1/rotations/:id/close","type":0,"val":"v1","end":""},{"old":"/api/v1/rotations/:id/close","type":0,"val":"rotations","end":""},{"old":"/api/v1/rotations/:id/close","type":1,"val":"id","end":""},{"old":"/api/v1/rotations/:id/close","type":0,"val":"close","end":""}],
+    types: placeholder as Registry['rotations.close']['types'],
+  },
+  'rotations.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/rotations/:id',
+    tokens: [{"old":"/api/v1/rotations/:id","type":0,"val":"api","end":""},{"old":"/api/v1/rotations/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/rotations/:id","type":0,"val":"rotations","end":""},{"old":"/api/v1/rotations/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['rotations.destroy']['types'],
+  },
+  'business_users.users': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/business-users/users',
+    tokens: [{"old":"/api/v1/business-users/users","type":0,"val":"api","end":""},{"old":"/api/v1/business-users/users","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users/users","type":0,"val":"business-users","end":""},{"old":"/api/v1/business-users/users","type":0,"val":"users","end":""}],
+    types: placeholder as Registry['business_users.users']['types'],
+  },
+  'business_users.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/business-users',
+    tokens: [{"old":"/api/v1/business-users","type":0,"val":"api","end":""},{"old":"/api/v1/business-users","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users","type":0,"val":"business-users","end":""}],
+    types: placeholder as Registry['business_users.index']['types'],
+  },
+  'business_users.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/business-users',
+    tokens: [{"old":"/api/v1/business-users","type":0,"val":"api","end":""},{"old":"/api/v1/business-users","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users","type":0,"val":"business-users","end":""}],
+    types: placeholder as Registry['business_users.store']['types'],
+  },
+  'business_users.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/business-users/:id',
+    tokens: [{"old":"/api/v1/business-users/:id","type":0,"val":"api","end":""},{"old":"/api/v1/business-users/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users/:id","type":0,"val":"business-users","end":""},{"old":"/api/v1/business-users/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['business_users.destroy']['types'],
+  },
+  'reports.sales_report': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/reports/sales',
+    tokens: [{"old":"/api/v1/reports/sales","type":0,"val":"api","end":""},{"old":"/api/v1/reports/sales","type":0,"val":"v1","end":""},{"old":"/api/v1/reports/sales","type":0,"val":"reports","end":""},{"old":"/api/v1/reports/sales","type":0,"val":"sales","end":""}],
+    types: placeholder as Registry['reports.sales_report']['types'],
+  },
+  'reports.transactions_report': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/reports/transactions',
+    tokens: [{"old":"/api/v1/reports/transactions","type":0,"val":"api","end":""},{"old":"/api/v1/reports/transactions","type":0,"val":"v1","end":""},{"old":"/api/v1/reports/transactions","type":0,"val":"reports","end":""},{"old":"/api/v1/reports/transactions","type":0,"val":"transactions","end":""}],
+    types: placeholder as Registry['reports.transactions_report']['types'],
+  },
+  'reports.stock_report': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/reports/stock',
+    tokens: [{"old":"/api/v1/reports/stock","type":0,"val":"api","end":""},{"old":"/api/v1/reports/stock","type":0,"val":"v1","end":""},{"old":"/api/v1/reports/stock","type":0,"val":"reports","end":""},{"old":"/api/v1/reports/stock","type":0,"val":"stock","end":""}],
+    types: placeholder as Registry['reports.stock_report']['types'],
+  },
 } as const satisfies Record<string, AdonisEndpoint>
 
 export { routes }
