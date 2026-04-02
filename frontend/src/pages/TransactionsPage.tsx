@@ -5,6 +5,7 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
+import { Icon } from '../components/ui/Icon'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Transaction } from '../types'
@@ -77,7 +78,9 @@ export function TransactionsPage() {
 
   if (!bid) return (
     <div className="text-center py-16">
-      <div className="text-5xl mb-4">💰</div>
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-violet-light text-emi-violet mb-4">
+        <Icon name="arrow-up-down" size={28} />
+      </div>
       <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
       <p className="text-gray-500">Select a business to view transactions.</p>
     </div>
@@ -93,7 +96,7 @@ export function TransactionsPage() {
         </div>
       )}
 
-      <h1 className="text-2xl font-semibold text-gray-900">Transactions</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
@@ -137,7 +140,7 @@ export function TransactionsPage() {
                     <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900">{tx.reference}</td>
                       <td className="px-6 py-4"><Badge variant={tx.type === 'income' ? 'success' : 'danger'}>{tx.type}</Badge></td>
-                      <td className={`px-6 py-4 font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className={`px-6 py-4 font-medium ${tx.type === 'income' ? 'text-emi-green' : 'text-red-600'}`}>
                         {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount, cur)}
                       </td>
                       <td className="px-6 py-4 text-gray-500">{tx.description || '-'}</td>
@@ -149,7 +152,9 @@ export function TransactionsPage() {
                   )) : (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center">
-                        <div className="text-4xl mb-2">💰</div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-violet-light text-emi-violet mb-2">
+                          <Icon name="arrow-up-down" size={24} />
+                        </div>
                         <p className="text-gray-500">No transactions yet. Add your first transaction.</p>
                       </td>
                     </tr>

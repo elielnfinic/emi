@@ -5,6 +5,7 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
+import { Icon } from '../components/ui/Icon'
 import api from '../services/api'
 import type { Business, Organization } from '../types'
 
@@ -91,7 +92,7 @@ export function BusinessesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Businesses</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Businesses</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
@@ -159,7 +160,9 @@ export function BusinessesPage() {
                   )) : (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center">
-                        <div className="text-4xl mb-2">🏢</div>
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-violet-light text-emi-violet mb-2">
+                          <Icon name="businesses" size={24} />
+                        </div>
                         <p className="text-gray-500">No businesses yet. Create your first business.</p>
                       </td>
                     </tr>

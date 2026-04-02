@@ -30,20 +30,27 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon, color = 'violet' }: StatCardProps) {
   const colors = {
-    violet: 'bg-violet-50 text-violet-600',
-    green: 'bg-green-50 text-green-600',
+    violet: 'bg-emi-violet-light text-emi-violet',
+    green: 'bg-emi-green-light text-emi-green',
     red: 'bg-red-50 text-red-600',
     blue: 'bg-blue-50 text-blue-600',
     yellow: 'bg-yellow-50 text-yellow-600',
   }
+  const accents = {
+    violet: 'border-l-emi-violet',
+    green: 'border-l-emi-green',
+    red: 'border-l-red-500',
+    blue: 'border-l-blue-500',
+    yellow: 'border-l-yellow-500',
+  }
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 border-l-4 ${accents[color]} p-5`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">{title}</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
         </div>
-        {icon && <div className={`p-3 rounded-lg ${colors[color]}`}>{icon}</div>}
+        {icon && <div className={`p-2.5 rounded-lg ${colors[color]}`}>{icon}</div>}
       </div>
     </div>
   )
