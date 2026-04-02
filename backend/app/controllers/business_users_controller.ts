@@ -13,9 +13,9 @@ const addUserValidator = vine.compile(
 
 const createUserValidator = vine.compile(
   vine.object({
-    fullName: vine.string().nullable(),
+    fullName: vine.string().trim().minLength(1),
     email: vine.string().email().maxLength(254),
-    password: vine.string().minLength(8).maxLength(32),
+    password: vine.string().minLength(8).maxLength(128),
   })
 )
 

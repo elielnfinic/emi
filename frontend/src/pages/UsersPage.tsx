@@ -130,7 +130,7 @@ export function UsersPage() {
               )}
               <Input label="Full Name" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} placeholder="John Doe" required />
               <Input label="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@example.com" required />
-              <Input label="Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" required />
+              <Input label="Password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" required />
               <Button type="submit" className="w-full" loading={createUserMutation.isPending}>
                 Create User
               </Button>
