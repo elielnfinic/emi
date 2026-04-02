@@ -8,9 +8,7 @@ interface PaginationProps {
 export function Pagination({ meta, onPageChange }: PaginationProps) {
   const { currentPage, lastPage, total, perPage } = meta
 
-  if (lastPage <= 1) return null
-
-  const from = (currentPage - 1) * perPage + 1
+  const from = total === 0 ? 0 : (currentPage - 1) * perPage + 1
   const to = Math.min(currentPage * perPage, total)
 
   const pages: (number | '...')[] = []
@@ -29,41 +27,47 @@ export function Pagination({ meta, onPageChange }: PaginationProps) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
       <p className="text-sm text-gray-500">
-        Showing <span className="font-medium">{from}</span>–<span className="font-medium">{to}</span> of <span className="font-medium">{total}</span>
+        {total === 0
+          ? 'No results'
+          : <>Showing <span className="font-medium">{from}</span>–<span className="font-medium">{to}</span> of <span className="font-medium">{total}</span></>
+        }
       </p>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-2 py-1 text-sm rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          ‹
-        </button>
-        {pages.map((p, i) =>
-          p === '...' ? (
-            <span key={`ellipsis-${i}`} className="px-2 py-1 text-sm text-gray-400">…</span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => onPageChange(p as number)}
-              className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                p === currentPage
-                  ? 'bg-emi-violet text-white font-medium'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {p}
-            </button>
-          )
-        )}
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === lastPage}
-          className="px-2 py-1 text-sm rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          ›
-        </button>
-      </div>
+      {lastPage > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            ‹
+          </button>
+          {pages.map((p, i) =>
+            p === '...' ? (
+              <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-sm text-gray-400">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => onPageChange(p as number)}
+                style={p === currentPage ? { backgroundColor: '#7B5CF6', color: '#fff' } : undefined}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+                  p === currentPage
+                    ? 'border-transparent'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === lastPage}
+            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            ›
+          </button>
+        </div>
+      )}
     </div>
   )
 }

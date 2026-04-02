@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
@@ -21,8 +21,12 @@ export function CustomersPage() {
   const [address, setAddress] = useState('')
   const [notes, setNotes] = useState('')
 
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('search') ?? ''
+  const page = Number(searchParams.get('page') ?? '1')
+  const [inputValue, setInputValue] = useState(search)
+
+  useEffect(() => { setInputValue(search) }, [search])
 
   const { data, isLoading } = useQuery<PaginatedResponse<Customer>>({
     queryKey: ['customers', bid, search, page],
@@ -67,9 +71,23 @@ export function CustomersPage() {
     if (window.confirm('Delete this customer?')) deleteMutation.mutate(id)
   }
 
-  const handleSearch = (value: string) => {
-    setSearch(value)
-    setPage(1)
+  const applySearch = (e: FormEvent) => {
+    e.preventDefault()
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (inputValue.trim()) next.set('search', inputValue.trim())
+      else next.delete('search')
+      next.set('page', '1')
+      return next
+    })
+  }
+
+  const handlePageChange = (p: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('page', String(p))
+      return next
+    })
   }
 
   if (!bid) return (
@@ -108,11 +126,14 @@ export function CustomersPage() {
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200">
-              <Input
-                placeholder="Search by name, email or phone…"
-                value={search}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
+              <form onSubmit={applySearch} className="flex gap-2">
+                <Input
+                  placeholder="Search by name, email or phone…"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                />
+                <Button type="submit" variant="secondary">Search</Button>
+              </form>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -151,7 +172,7 @@ export function CustomersPage() {
                 </tbody>
               </table>
             </div>
-            {meta && <Pagination meta={meta} onPageChange={setPage} />}
+            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
           </div>
         </div>
       </div>
