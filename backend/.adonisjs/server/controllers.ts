@@ -18,4 +18,5 @@ export const controllers = {
   StockItems: () => import('#controllers/stock_items_controller'),
   Suppliers: () => import('#controllers/suppliers_controller'),
   Transactions: () => import('#controllers/transactions_controller'),
+  Roles: () => import('#controllers/roles_controller'),
 }

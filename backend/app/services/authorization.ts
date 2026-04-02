@@ -12,21 +12,8 @@ export async function isSuperAdmin(userId: number): Promise<boolean> {
 }
 
 /**
- * Role hierarchy: admin > manager > cashier = stock
- * - admin: Full access to everything in the business
- * - manager: Can manage sales, transactions, customers, suppliers, stock, reports
- * - cashier: Can view/create sales, view customers
- * - stock: Can view/manage stock items
- */
-const ROLE_NAMES: Record<number, string> = {
-  1: 'admin',
-  2: 'manager',
-  3: 'cashier',
-  4: 'stock',
-}
-
-/**
  * Get the user's role name in a specific business.
+ * Looks up the role name from the roles table to avoid hardcoded ID assumptions.
  * Returns null if user is not assigned to the business.
  */
 export async function getUserRoleInBusiness(
@@ -37,9 +24,10 @@ export async function getUserRoleInBusiness(
     .where('userId', userId)
     .where('businessId', businessId)
     .where('isActive', true)
+    .preload('role')
     .first()
   if (!bu) return null
-  return ROLE_NAMES[bu.roleId] || null
+  return bu.role?.name ?? null
 }
 
 /**
@@ -52,9 +40,9 @@ export async function isOrgAdmin(userId: number, organizationId: number): Promis
     .whereHas('business', (q) => {
       q.where('organizationId', organizationId)
     })
-    .where('roleId', 1) // admin role
+    .preload('role')
     .first()
-  return !!adminBu
+  return adminBu?.role?.name === 'admin'
 }
 
 /**

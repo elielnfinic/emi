@@ -276,6 +276,12 @@ const routes = {
     tokens: [{"old":"/api/v1/rotations/:id","type":0,"val":"api","end":""},{"old":"/api/v1/rotations/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/rotations/:id","type":0,"val":"rotations","end":""},{"old":"/api/v1/rotations/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['rotations.destroy']['types'],
   },
+  'roles.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/roles',
+    tokens: [{"old":"/api/v1/roles","type":0,"val":"api","end":""},{"old":"/api/v1/roles","type":0,"val":"v1","end":""},{"old":"/api/v1/roles","type":0,"val":"roles","end":""}],
+    types: placeholder as Registry['roles.index']['types'],
+  },
   'business_users.users': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/business-users/users',
@@ -299,6 +305,12 @@ const routes = {
     pattern: '/api/v1/business-users/create-user',
     tokens: [{"old":"/api/v1/business-users/create-user","type":0,"val":"api","end":""},{"old":"/api/v1/business-users/create-user","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users/create-user","type":0,"val":"business-users","end":""},{"old":"/api/v1/business-users/create-user","type":0,"val":"create-user","end":""}],
     types: placeholder as Registry['business_users.create_user']['types'],
+  },
+  'business_users.update': {
+    methods: ["PATCH"],
+    pattern: '/api/v1/business-users/:id',
+    tokens: [{"old":"/api/v1/business-users/:id","type":0,"val":"api","end":""},{"old":"/api/v1/business-users/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/business-users/:id","type":0,"val":"business-users","end":""},{"old":"/api/v1/business-users/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['business_users.update']['types'],
   },
   'business_users.destroy': {
     methods: ["DELETE"],

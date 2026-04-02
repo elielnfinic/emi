@@ -1,3 +1,10 @@
+export interface Role {
+  id: number
+  name: string
+  displayName: string
+  description: string | null
+}
+
 export interface User {
   id: number
   fullName: string | null

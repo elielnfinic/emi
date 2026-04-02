@@ -71,6 +71,19 @@ export default class BusinessUsersController {
       .orderBy('fullName', 'asc')
   }
 
+  async update(ctx: HttpContext) {
+    const bu = await BusinessUser.findOrFail(ctx.params.id)
+    await verifyBusinessAccess(ctx, bu.businessId, ['admin'])
+    const { roleId } = await ctx.request.validateUsing(
+      vine.compile(vine.object({ roleId: vine.number() }))
+    )
+    bu.roleId = roleId
+    await bu.save()
+    await bu.load('user')
+    await bu.load('role')
+    return bu
+  }
+
   async destroy(ctx: HttpContext) {
     const bu = await BusinessUser.findOrFail(ctx.params.id)
     await verifyBusinessAccess(ctx, bu.businessId, ['admin'])

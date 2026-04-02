@@ -15,6 +15,7 @@ import { BusinessesPage } from './pages/BusinessesPage'
 import { RotationsPage } from './pages/RotationsPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { UsersPage } from './pages/UsersPage'
+import { UnpaidBillsPage } from './pages/UnpaidBillsPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="businesses" element={<BusinessesPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="unpaid-bills" element={<UnpaidBillsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

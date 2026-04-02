@@ -128,8 +128,8 @@ export default class SalesController {
       date: DateTime.fromISO(data.date),
     })
 
-    sale.paidAmount += data.amount
-    if (sale.paidAmount >= sale.totalAmount) {
+    sale.paidAmount = Number(sale.paidAmount) + data.amount
+    if (sale.paidAmount >= Number(sale.totalAmount)) {
       sale.status = 'completed'
     }
     await sale.save()

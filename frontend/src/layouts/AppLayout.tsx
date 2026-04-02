@@ -7,11 +7,23 @@ import api from '../services/api'
 import type { Business, Organization } from '../types'
 
 export function AppLayout() {
-  const { user, logout } = useAuthStore()
+  const { user, logout, setUser } = useAuthStore()
   const { currentBusiness, setCurrentBusiness, sidebarOpen, toggleSidebar } = useAppStore()
   const navigate = useNavigate()
 
   const isSuperAdmin = user?.role === 'superadmin'
+
+  // Refresh businessRoles from the server on mount so role changes take effect without re-login
+  useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const res = await api.get('/account/profile')
+      const profile = res.data?.data ?? res.data
+      setUser(profile)
+      return profile
+    },
+    staleTime: 60_000,
+  })
 
   // Check if user has any business roles at all (superadmin bypasses this)
   const hasBusinessAccess = useMemo(() => {
@@ -77,6 +89,7 @@ export function AppLayout() {
   const financeNav = useMemo(() => {
     const items = [
       { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down', roles: ['admin', 'manager'] },
+      { to: '/unpaid-bills', label: 'Unpaid Bills', icon: 'debt', roles: ['admin', 'manager', 'cashier'] },
       { to: '/rotations', label: 'Rotations', icon: 'rotations', roles: ['admin', 'manager'] },
       { to: '/reports', label: 'Reports', icon: 'reports', roles: ['admin', 'manager'] },
     ]

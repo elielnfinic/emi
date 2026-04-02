@@ -8,14 +8,7 @@ import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { useAppStore, useAuthStore } from '../stores'
 import api from '../services/api'
-import type { BusinessUser, User } from '../types'
-
-const ROLES = [
-  { value: '1', label: 'Admin' },
-  { value: '2', label: 'Manager' },
-  { value: '3', label: 'Cashier' },
-  { value: '4', label: 'Stock' },
-]
+import type { BusinessUser, Role, User } from '../types'
 
 export function UsersPage() {
   const { currentBusiness } = useAppStore()
@@ -25,7 +18,10 @@ export function UsersPage() {
   const queryClient = useQueryClient()
 
   const [userId, setUserId] = useState('')
-  const [roleId, setRoleId] = useState('3')
+  const [roleId, setRoleId] = useState('')
+  const [assignBusinessId, setAssignBusinessId] = useState(String(bid ?? ''))
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editRoleId, setEditRoleId] = useState('')
 
   // Create new user form state
   const [newFullName, setNewFullName] = useState('')
@@ -46,9 +42,21 @@ export function UsersPage() {
     enabled: !!bid,
   })
 
+  const { data: allBusinesses } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['businesses'],
+    queryFn: async () => (await api.get('/businesses')).data,
+    enabled: !!bid,
+  })
+
+  const { data: roles } = useQuery<Role[]>({
+    queryKey: ['roles'],
+    queryFn: async () => (await api.get('/roles')).data,
+  })
+
   const assignMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => api.post('/business-users', payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['business-users', variables.businessId] })
       queryClient.invalidateQueries({ queryKey: ['business-users', bid] })
       resetAssignForm()
     },
@@ -73,9 +81,20 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['business-users', bid] }),
   })
 
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, roleId }: { id: number; roleId: number }) =>
+      api.patch(`/business-users/${id}`, { roleId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['business-users', bid] })
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      setEditingId(null)
+    },
+  })
+
   const resetAssignForm = () => {
     setUserId('')
-    setRoleId('3')
+    setRoleId('')
+    setAssignBusinessId(String(bid ?? ''))
   }
 
   const resetCreateForm = () => {
@@ -88,7 +107,7 @@ export function UsersPage() {
   const handleAssignSubmit = (e: FormEvent) => {
     e.preventDefault()
     assignMutation.mutate({
-      businessId: bid,
+      businessId: Number(assignBusinessId),
       userId: Number(userId),
       roleId: Number(roleId),
     })
@@ -159,6 +178,14 @@ export function UsersPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Add User to Business</h3>
             <form onSubmit={handleAssignSubmit} className="space-y-3">
               <Select
+                label="Business"
+                value={assignBusinessId}
+                onChange={(e) => setAssignBusinessId(e.target.value)}
+                options={allBusinesses?.map((b) => ({ value: String(b.id), label: b.name })) || []}
+                placeholder="Select a business..."
+                required
+              />
+              <Select
                 label="User"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
@@ -170,9 +197,11 @@ export function UsersPage() {
                 label="Role"
                 value={roleId}
                 onChange={(e) => setRoleId(e.target.value)}
-                options={ROLES}
+                options={roles?.map((r) => ({ value: String(r.id), label: r.displayName })) || []}
+                placeholder="Select a role..."
+                required
               />
-              <Button type="submit" className="w-full" loading={assignMutation.isPending} disabled={!userId}>
+              <Button type="submit" className="w-full" loading={assignMutation.isPending} disabled={!userId || !assignBusinessId || !roleId}>
                 Add User
               </Button>
             </form>
@@ -198,13 +227,49 @@ export function UsersPage() {
                       <td className="px-6 py-4 font-medium text-gray-900">{bu.user?.fullName || `User #${bu.userId}`}</td>
                       <td className="px-6 py-4 text-gray-500">{bu.user?.email || '-'}</td>
                       <td className="px-6 py-4">
-                        <Badge variant="info">{bu.role?.displayName || bu.role?.name || `Role #${bu.roleId}`}</Badge>
+                        {editingId === bu.id ? (
+                          <select
+                            value={editRoleId}
+                            onChange={(e) => setEditRoleId(e.target.value)}
+                            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emi-violet/30"
+                          >
+                            {roles?.map((r) => (
+                              <option key={r.id} value={String(r.id)}>{r.displayName}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Badge variant="info">{bu.role?.displayName || bu.role?.name || `Role #${bu.roleId}`}</Badge>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={bu.isActive ? 'success' : 'default'}>{bu.isActive ? 'Active' : 'Inactive'}</Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(bu.id)}>Remove</Button>
+                        {editingId === bu.id ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              loading={updateRoleMutation.isPending}
+                              onClick={() => updateRoleMutation.mutate({ id: bu.id, roleId: Number(editRoleId) })}
+                            >
+                              Save
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => { setEditingId(bu.id); setEditRoleId(String(bu.roleId)) }}
+                            >
+                              Edit Role
+                            </Button>
+                            <Button variant="danger" size="sm" onClick={() => handleDelete(bu.id)}>Remove</Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )) : (

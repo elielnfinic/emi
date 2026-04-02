@@ -49,10 +49,12 @@ export type ScannedRoutes = {
     'rotations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'roles.index': { paramsTuple?: []; params?: {} }
     'business_users.users': { paramsTuple?: []; params?: {} }
     'business_users.index': { paramsTuple?: []; params?: {} }
     'business_users.store': { paramsTuple?: []; params?: {} }
     'business_users.create_user': { paramsTuple?: []; params?: {} }
+    'business_users.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'business_users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'reports.sales_report': { paramsTuple?: []; params?: {} }
     'reports.transactions_report': { paramsTuple?: []; params?: {} }
@@ -77,6 +79,7 @@ export type ScannedRoutes = {
     'sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.index': { paramsTuple?: []; params?: {} }
     'rotations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'roles.index': { paramsTuple?: []; params?: {} }
     'business_users.users': { paramsTuple?: []; params?: {} }
     'business_users.index': { paramsTuple?: []; params?: {} }
     'reports.sales_report': { paramsTuple?: []; params?: {} }
@@ -102,6 +105,7 @@ export type ScannedRoutes = {
     'sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.index': { paramsTuple?: []; params?: {} }
     'rotations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'roles.index': { paramsTuple?: []; params?: {} }
     'business_users.users': { paramsTuple?: []; params?: {} }
     'business_users.index': { paramsTuple?: []; params?: {} }
     'reports.sales_report': { paramsTuple?: []; params?: {} }
@@ -143,6 +147,9 @@ export type ScannedRoutes = {
     'sales.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'business_users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+  }
+  PATCH: {
+    'business_users.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {
