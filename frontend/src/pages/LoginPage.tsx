@@ -24,7 +24,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       const res = await api.post('/auth/login', { email, password })
-      setAuth(res.data.user, res.data.token.token)
+      setAuth(res.data.data.user, res.data.data.token)
       navigate('/dashboard')
     } catch {
       setError('Invalid email or password')
