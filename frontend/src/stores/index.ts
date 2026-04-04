@@ -10,8 +10,19 @@ interface AuthState {
   logout: () => void
 }
 
+// AdonisJS transformer objects have $type:"item" and store the real data
+// in transformerData[0]. Unwrap so user.fullName / user.email work everywhere.
+function normaliseUser(raw: any): User | null {
+  if (!raw) return null
+  if (raw.$type === 'item' && Array.isArray(raw.transformerData)) {
+    const base = raw.transformerData[0] ?? {}
+    return { ...base, role: raw.role, businessRoles: raw.businessRoles } as User
+  }
+  return raw as User
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
+  user: normaliseUser(JSON.parse(localStorage.getItem('auth_user') || 'null')),
   token: localStorage.getItem('auth_token'),
   isAuthenticated: !!localStorage.getItem('auth_token'),
   setAuth: (user, token) => {

@@ -23,7 +23,7 @@ export default class ProfileController {
     }
 
     return serialize({
-      ...UserTransformer.transform(user),
+      ...UserTransformer.transform(user).toObject(),
       role: user.role?.name ?? null,
       businessRoles: roles,
     })

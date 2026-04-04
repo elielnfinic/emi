@@ -26,7 +26,7 @@ export default class AccessTokenController {
 
     return serialize({
       user: {
-        ...UserTransformer.transform(user),
+        ...UserTransformer.transform(user).toObject(),
         role: user.role?.name ?? null,
         businessRoles,
       },
