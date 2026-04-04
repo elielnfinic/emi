@@ -26,6 +26,7 @@ export function TransactionsPage() {
 
   const [showModal, setShowModal] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [successType, setSuccessType] = useState<'income' | 'expense'>('income')
 
   const [type, setType] = useState('income')
   const [amount, setAmount] = useState('')
@@ -54,6 +55,7 @@ export function TransactionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', bid] })
       queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
+      setSuccessType(type as 'income' | 'expense')
       resetForm()
       setShowModal(false)
       setShowSuccess(true)
@@ -143,9 +145,11 @@ export function TransactionsPage() {
     <div className="space-y-5">
       {/* Success toast */}
       {showSuccess && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-emi-green text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in">
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in ${successType === 'income' ? 'bg-emi-green' : 'bg-red-500'}`}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-          <span className="font-medium text-sm">Transaction ajoutée avec succès !</span>
+          <span className="font-medium text-sm">
+            {successType === 'income' ? 'Entrée enregistrée !' : 'Dépense enregistrée !'}
+          </span>
         </div>
       )}
 
@@ -157,9 +161,20 @@ export function TransactionsPage() {
             {currentBusiness?.name} · {meta?.total ?? transactions.length} transaction{(meta?.total ?? transactions.length) !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setShowModal(true) }}>
-          <Icon name="plus" size={15} className="mr-1" /> Nouvelle transaction
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { resetForm(); setType('income'); setShowModal(true) }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm"
+          >
+            <Icon name="arrow-up" size={14} /> Entrée d'argent
+          </button>
+          <button
+            onClick={() => { resetForm(); setType('expense'); setShowModal(true) }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors shadow-sm"
+          >
+            <Icon name="arrow-down" size={14} /> Dépense
+          </button>
+        </div>
       </div>
 
       {/* KPI row */}
@@ -270,7 +285,11 @@ export function TransactionsPage() {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nouvelle transaction">
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={type === 'income' ? '💰 Entrée d\'argent' : '💸 Enregistrer une dépense'}
+      >
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Type toggle */}
           <div className="flex gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
