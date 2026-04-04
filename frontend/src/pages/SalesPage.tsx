@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, type FormEvent } from 'react'
+import { useState, useEffect, useRef, Fragment, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
@@ -12,568 +12,839 @@ import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Sale, Customer, StockItem, PaginatedResponse } from '../types'
 
+/* ─── helpers ─────────────────────────────────────────────────────────── */
 function fmt(n: number, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n)
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
+}
+function useDebounce<T>(value: T, ms: number) {
+  const [d, setD] = useState(value)
+  useEffect(() => { const t = setTimeout(() => setD(value), ms); return () => clearTimeout(t) }, [value, ms])
+  return d
 }
 
-interface SaleItemInput {
-  stockItemId: number
-  name: string
-  quantity: number
-  unitPrice: number
+interface CartItem { stockItemId?: number; name: string; quantity: number; unitPrice: number }
+
+/* ─── Customer Combobox ────────────────────────────────────────────────── */
+function CustomerCombobox({
+  bid, value, onChange, required,
+}: {
+  bid: number; value: string; onChange: (id: string, name: string) => void; required?: boolean
+}) {
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+  const [label, setLabel] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newPhone, setNewPhone] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const dq = useDebounce(q, 280)
+  const qc = useQueryClient()
+
+  const { data: results, isFetching } = useQuery<Customer[]>({
+    queryKey: ['customer-search', bid, dq],
+    queryFn: async () => {
+      const r = await api.get('/customers', { params: { business_id: bid, search: dq, per_page: 10 } })
+      return r.data.data ?? r.data
+    },
+    enabled: !!bid && dq.length > 0,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (p: Record<string, unknown>) => api.post('/customers', p),
+    onSuccess: (res) => {
+      const c: Customer = res.data?.data ?? res.data
+      qc.invalidateQueries({ queryKey: ['customers', bid] })
+      onChange(String(c.id), c.name)
+      setLabel(c.name)
+      setQ(c.name)
+      setOpen(false)
+      setShowCreate(false)
+      setNewName(''); setNewPhone('')
+    },
+  })
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const select = (c: Customer) => {
+    onChange(String(c.id), c.name)
+    setLabel(c.name)
+    setQ(c.name)
+    setOpen(false)
+  }
+  const clear = () => { onChange('', ''); setLabel(''); setQ(''); setOpen(false) }
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex gap-2 items-center">
+        <div className="relative flex-1">
+          <input
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setLabel(''); onChange('', ''); setOpen(true) }}
+            onFocus={() => setOpen(true)}
+            placeholder="Rechercher un client…"
+            className="w-full px-3 py-2.5 pr-8 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all"
+          />
+          {value && (
+            <button type="button" onClick={clear} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          )}
+          {isFetching && !value && (
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <div className="w-3.5 h-3.5 border-2 border-zinc-300 border-t-emi-violet rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate(v => !v)}
+          title="Nouveau client"
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-emi-violet hover:border-emi-violet/40 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
+        >
+          <Icon name="plus" size={16} />
+        </button>
+      </div>
+
+      {/* Dropdown */}
+      {open && (results?.length ?? 0) > 0 && (
+        <div className="absolute z-30 mt-1 w-full max-h-52 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl">
+          {results!.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onMouseDown={() => select(c)}
+              className="w-full text-left px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"
+            >
+              <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-emi-violet flex items-center justify-center text-xs font-bold shrink-0">
+                {c.name[0].toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{c.name}</p>
+                {c.phone && <p className="text-xs text-zinc-400 truncate">{c.phone}</p>}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && dq.length > 0 && results?.length === 0 && !isFetching && (
+        <div className="absolute z-30 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl px-3 py-3">
+          <p className="text-xs text-zinc-400 text-center">Aucun client trouvé</p>
+        </div>
+      )}
+
+      {/* Inline create */}
+      {showCreate && (
+        <div className="mt-2 bg-violet-50/60 dark:bg-violet-950/20 border border-violet-200/60 dark:border-violet-800/40 rounded-xl p-3 space-y-2">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Nouveau client</p>
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nom *"
+            className="w-full px-3 py-2 rounded-lg text-sm border border-violet-200 dark:border-violet-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30"
+          />
+          <input
+            value={newPhone}
+            onChange={(e) => setNewPhone(e.target.value)}
+            placeholder="Téléphone (optionnel)"
+            className="w-full px-3 py-2 rounded-lg text-sm border border-violet-200 dark:border-violet-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30"
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button" size="sm" className="flex-1"
+              loading={createMutation.isPending}
+              disabled={!newName.trim()}
+              onClick={() => createMutation.mutate({ businessId: bid, name: newName.trim(), phone: newPhone.trim() || undefined })}
+            >Créer</Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setShowCreate(false); setNewName(''); setNewPhone('') }}>
+              Annuler
+            </Button>
+          </div>
+        </div>
+      )}
+      {/* Hidden input to trigger browser required validation */}
+      {required && <input tabIndex={-1} required value={value} onChange={() => {}} className="sr-only" />}
+      {label && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>{label}</p>}
+    </div>
+  )
 }
 
+/* ─── Product Search ───────────────────────────────────────────────────── */
+function ProductSearch({
+  bid, cur, stockItems, onAdd,
+}: {
+  bid: number; cur: string; stockItems: StockItem[]; onAdd: (item: StockItem) => void
+}) {
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const filtered = q.length > 0
+    ? stockItems.filter(s => s.name.toLowerCase().includes(q.toLowerCase()) && s.quantity > 0).slice(0, 6)
+    : stockItems.filter(s => s.quantity > 0).slice(0, 6)
+
+  const add = (item: StockItem) => { onAdd(item); setQ(''); setOpen(false) }
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          placeholder="Rechercher un produit…"
+          className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all"
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-30 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl overflow-hidden">
+          {filtered.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onMouseDown={() => add(s)}
+              className="w-full text-left px-3 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-between gap-3 transition-colors group"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{s.name}</p>
+                <p className="text-xs text-zinc-400">{s.quantity} en stock · {s.sku || ''}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-semibold text-emi-violet">{fmt(s.sellingPrice ?? 0, cur)}</p>
+                <p className="text-xs text-zinc-400 group-hover:text-emi-violet transition-colors">+ Ajouter</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Cart Row ─────────────────────────────────────────────────────────── */
+function CartRow({ item, index, cur, onUpdate, onRemove }: {
+  item: CartItem; index: number; cur: string
+  onUpdate: (i: number, f: keyof CartItem, v: string | number) => void
+  onRemove: (i: number) => void
+}) {
+  return (
+    <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl px-3 py-2.5">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{item.name}</p>
+        <p className="text-xs text-zinc-400">{fmt(item.unitPrice, cur)} / unité</p>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={() => item.quantity > 1 ? onUpdate(index, 'quantity', item.quantity - 1) : onRemove(index)}
+          className="w-6 h-6 rounded-md bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 flex items-center justify-center hover:border-red-400 hover:text-red-500 transition-colors text-sm font-bold leading-none"
+        >−</button>
+        <input
+          type="number"
+          min={1}
+          value={item.quantity}
+          onChange={(e) => onUpdate(index, 'quantity', Math.max(1, Number(e.target.value)))}
+          className="w-9 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-transparent border-0 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => onUpdate(index, 'quantity', item.quantity + 1)}
+          className="w-6 h-6 rounded-md bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 flex items-center justify-center hover:border-emi-violet hover:text-emi-violet transition-colors text-sm font-bold leading-none"
+        >+</button>
+      </div>
+      <div className="w-20 text-right shrink-0">
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={item.unitPrice}
+          onChange={(e) => onUpdate(index, 'unitPrice', Number(e.target.value))}
+          className="w-full text-right text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-emi-violet/30 rounded px-1"
+        />
+      </div>
+      <button type="button" onClick={() => onRemove(index)} className="text-zinc-300 hover:text-red-500 transition-colors ml-1">
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  )
+}
+
+/* ─── Sale Card ────────────────────────────────────────────────────────── */
+function SaleCard({ s, cur, paymentPanelId, openPaymentPanel, closePaymentPanel, addPaymentMutation, payAmount, setPayAmount, payMethod, setPayMethod, payDate, setPayDate, payNotes, setPayNotes, onDelete }: {
+  s: Sale; cur: string; paymentPanelId: number | null
+  openPaymentPanel: (s: Sale) => void; closePaymentPanel: () => void
+  addPaymentMutation: { isPending: boolean; mutate: (p: Record<string, unknown>) => void }
+  payAmount: string; setPayAmount: (v: string) => void
+  payMethod: string; setPayMethod: (v: string) => void
+  payDate: string; setPayDate: (v: string) => void
+  payNotes: string; setPayNotes: (v: string) => void
+  onDelete: (id: number) => void
+}) {
+  const actualPaid = s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount)
+  const remaining = Number(s.totalAmount) - actualPaid
+  const paidPct = s.totalAmount > 0 ? Math.min(100, Math.round((actualPaid / Number(s.totalAmount)) * 100)) : 0
+  const isPending = s.type === 'credit' && s.status !== 'completed'
+  const isOpen = paymentPanelId === s.id
+
+  return (
+    <div className={`bg-white dark:bg-zinc-900 rounded-2xl border transition-all ${isOpen ? 'border-emi-violet/40 shadow-md shadow-emi-violet/5' : 'border-zinc-200 dark:border-zinc-800'}`}>
+      <div className="flex items-start justify-between gap-3 p-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{s.reference}</span>
+            <Badge variant={s.type === 'cash' ? 'success' : 'info'} dot>{s.type}</Badge>
+            <Badge variant={s.status === 'completed' ? 'success' : 'warning'} dot>{s.status}</Badge>
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{s.customer?.name || 'Client de passage'}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">{String(s.date).slice(0, 10)} · {s.items?.length ?? 0} article{(s.items?.length ?? 0) > 1 ? 's' : ''}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-lg font-bold text-zinc-900 dark:text-zinc-50">{fmt(Number(s.totalAmount), cur)}</p>
+          {isPending && <p className="text-xs text-red-500 font-medium mt-0.5">−{fmt(remaining, cur)}</p>}
+        </div>
+      </div>
+
+      {isPending && (
+        <div className="px-4 pb-3">
+          <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
+            <span>{fmt(actualPaid, cur)} payé</span>
+            <span>{paidPct}%</span>
+          </div>
+          <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
+            <div className="bg-emi-violet h-1.5 rounded-full transition-all" style={{ width: `${paidPct}%` }} />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 px-4 pb-4">
+        {isPending && (
+          <Button size="sm" variant={isOpen ? 'outline' : 'primary'} onClick={() => isOpen ? closePaymentPanel() : openPaymentPanel(s)}>
+            {isOpen ? 'Fermer' : '💳 Encaisser'}
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => onDelete(s.id)}>
+          Supprimer
+        </Button>
+      </div>
+
+      {isOpen && (
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 space-y-3 bg-violet-50/30 dark:bg-violet-950/10 rounded-b-2xl">
+          {s.payments && s.payments.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Historique</p>
+              {s.payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between text-xs bg-white dark:bg-zinc-900 rounded-lg px-3 py-2 border border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-400">{String(p.date).slice(0, 10)}</span>
+                    <Badge variant="info">{p.paymentMethod?.replace('_', ' ')}</Badge>
+                  </div>
+                  <span className="font-semibold text-emerald-600">+{fmt(Number(p.amount), cur)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Ajouter un versement</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="number" step="0.01" placeholder="Montant" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} min={0.01} />
+              <Select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} options={[
+                { value: 'cash', label: '💵 Cash' },
+                { value: 'transfer', label: '🏦 Virement' },
+                { value: 'mobile_money', label: '📱 Mobile Money' },
+              ]} />
+              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+              <Input placeholder="Notes (optionnel)" value={payNotes} onChange={(e) => setPayNotes(e.target.value)} />
+            </div>
+            <Button
+              type="button" size="sm" className="mt-2"
+              loading={addPaymentMutation.isPending}
+              disabled={!payAmount || Number(payAmount) <= 0}
+              onClick={() => addPaymentMutation.mutate({ saleId: s.id, amount: Number(payAmount), paymentMethod: payMethod, date: payDate, notes: payNotes || undefined })}
+            >
+              Enregistrer le paiement
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Main Page ─────────────────────────────────────────────────────────── */
 export function SalesPage() {
   const { currentBusiness } = useAppStore()
   const bid = currentBusiness?.id
   const cur = currentBusiness?.currency || 'USD'
-  const queryClient = useQueryClient()
-
+  const qc = useQueryClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const [type, setType] = useState('cash')
+  // Form state
+  const [type, setType] = useState<'cash' | 'credit'>('cash')
   const [customerId, setCustomerId] = useState('')
+  const [customerName, setCustomerName] = useState('')
   const [date, setDate] = useState(today)
   const [notes, setNotes] = useState('')
+  const [items, setItems] = useState<CartItem[]>([])
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState(false)
-  const [items, setItems] = useState<SaleItemInput[]>([])
-  const [selectedStockItemId, setSelectedStockItemId] = useState('')
+  // Manual item
+  const [showManual, setShowManual] = useState(false)
+  const [manualName, setManualName] = useState('')
+  const [manualPrice, setManualPrice] = useState('')
+  const [manualQty, setManualQty] = useState('1')
 
-  // Quick-add customer
-  const [showNewCustomer, setShowNewCustomer] = useState(false)
-  const [newCustomerName, setNewCustomerName] = useState('')
-  const [newCustomerPhone, setNewCustomerPhone] = useState('')
-  const [newCustomerEmail, setNewCustomerEmail] = useState('')
+  // History state
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
+  const [historyOpen, setHistoryOpen] = useState(true)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('search') ?? ''
+  const page = Number(searchParams.get('page') ?? '1')
+  const [inputValue, setInputValue] = useState(search)
+  useEffect(() => setInputValue(search), [search])
 
   // Payment panel
   const [paymentPanelId, setPaymentPanelId] = useState<number | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [payMethod, setPayMethod] = useState('cash')
-  const [payDate, setPayDate] = useState('')
+  const [payDate, setPayDate] = useState(today)
   const [payNotes, setPayNotes] = useState('')
 
-  const [searchParams, setSearchParams] = useSearchParams()
-  const search = searchParams.get('search') ?? ''
-  const page = Number(searchParams.get('page') ?? '1')
-  const [inputValue, setInputValue] = useState(search)
-
-  useEffect(() => { setInputValue(search) }, [search])
-
+  // Queries
   const { data, isLoading } = useQuery<PaginatedResponse<Sale>>({
     queryKey: ['sales', bid, search, page],
     queryFn: async () => (await api.get('/sales', { params: { business_id: bid, search, page } })).data,
     enabled: !!bid,
   })
-
-  const { data: customers } = useQuery<Customer[]>({
-    queryKey: ['customers', bid],
-    queryFn: async () => {
-      const res = await api.get('/customers', { params: { business_id: bid, per_page: 500 } })
-      return res.data.data
-    },
-    enabled: !!bid,
-  })
-
-  const { data: stockItems } = useQuery<StockItem[]>({
+  const { data: stockItems = [] } = useQuery<StockItem[]>({
     queryKey: ['stock-items', bid],
     queryFn: async () => {
-      const res = await api.get('/stock-items', { params: { business_id: bid, per_page: 500 } })
-      return res.data.data
+      const r = await api.get('/stock-items', { params: { business_id: bid, per_page: 500 } })
+      return r.data.data ?? r.data
     },
     enabled: !!bid,
   })
 
+  // Mutations
   const createMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => api.post('/sales', payload),
+    mutationFn: (p: Record<string, unknown>) => api.post('/sales', p),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales', bid], refetchType: 'all' })
-      queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
-      queryClient.invalidateQueries({ queryKey: ['stock-items', bid] })
+      qc.invalidateQueries({ queryKey: ['sales', bid], refetchType: 'all' })
+      qc.invalidateQueries({ queryKey: ['dashboard', bid] })
+      qc.invalidateQueries({ queryKey: ['stock-items', bid] })
       resetForm()
       setFormSuccess(true)
       setTimeout(() => setFormSuccess(false), 3000)
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { errors?: { message: string }[]; error?: string } } }
-      setFormError(
-        error.response?.data?.error ||
-        error.response?.data?.errors?.[0]?.message ||
-        'Failed to create sale. Please try again.'
-      )
+      const e = err as { response?: { data?: { errors?: { message: string }[]; error?: string } } }
+      setFormError(e.response?.data?.error || e.response?.data?.errors?.[0]?.message || 'Erreur lors de la création.')
     },
   })
-
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/sales/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales', bid] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sales', bid] }); qc.invalidateQueries({ queryKey: ['dashboard', bid] }) },
   })
-
-  const createCustomerMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => api.post('/customers', payload),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['customers', bid] })
-      const newId = res.data?.id ?? res.data?.data?.id
-      if (newId) setCustomerId(String(newId))
-      setShowNewCustomer(false)
-      setNewCustomerName('')
-      setNewCustomerPhone('')
-      setNewCustomerEmail('')
-    },
-  })
-
   const addPaymentMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => api.post('/sales/payments', payload),
-    onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ['sales', bid] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
-      setPayAmount('')
-      setPayNotes('')
-    },
+    mutationFn: (p: Record<string, unknown>) => api.post('/sales/payments', p),
+    onSuccess: () => { qc.refetchQueries({ queryKey: ['sales', bid] }); qc.invalidateQueries({ queryKey: ['dashboard', bid] }); setPayAmount(''); setPayNotes('') },
   })
-
-  const openPaymentPanel = (sale: Sale) => {
-    const remaining = sale.totalAmount - sale.paidAmount
-    setPaymentPanelId(sale.id)
-    setPayAmount(remaining > 0 ? String(Number(remaining.toFixed(2))) : '')
-    setPayMethod('cash')
-    setPayDate(new Date().toISOString().split('T')[0])
-    setPayNotes('')
-  }
 
   const resetForm = () => {
-    setType('cash')
-    setCustomerId('')
-    setDate(today)
-    setNotes('')
-    setFormError('')
-    setItems([])
-    setSelectedStockItemId('')
-    setShowNewCustomer(false)
-    setNewCustomerName('')
-    setNewCustomerPhone('')
-    setNewCustomerEmail('')
+    setType('cash'); setCustomerId(''); setCustomerName(''); setDate(today)
+    setNotes(''); setItems([]); setFormError('')
+    setShowManual(false); setManualName(''); setManualPrice(''); setManualQty('1')
   }
 
-  const handleSelectProduct = (stockItemId: string) => {
-    if (!stockItemId) return
-    const stockItem = stockItems?.find((s) => s.id === Number(stockItemId))
-    if (!stockItem) return
-    setItems((prev) => {
-      const existingIndex = prev.findIndex((i) => i.stockItemId === stockItem.id)
-      if (existingIndex >= 0) {
-        return prev.map((item, i) =>
-          i === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
-        )
-      }
-      return [...prev, { stockItemId: stockItem.id, name: stockItem.name, quantity: 1, unitPrice: stockItem.sellingPrice || 0 }]
-    })
-    setSelectedStockItemId('')
+  const addToCart = (s: StockItem) => setItems(prev => {
+    const idx = prev.findIndex(i => i.stockItemId === s.id)
+    if (idx >= 0) return prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it)
+    return [...prev, { stockItemId: s.id, name: s.name, quantity: 1, unitPrice: s.sellingPrice ?? 0 }]
+  })
+
+  const addManualItem = () => {
+    if (!manualName.trim() || !manualPrice) return
+    setItems(prev => [...prev, { name: manualName.trim(), quantity: Number(manualQty) || 1, unitPrice: Number(manualPrice) }])
+    setManualName(''); setManualPrice(''); setManualQty('1'); setShowManual(false)
   }
 
-  const handleCreateCustomer = () => {
-    if (!newCustomerName.trim()) return
-    createCustomerMutation.mutate({
-      businessId: bid,
-      name: newCustomerName.trim(),
-      phone: newCustomerPhone.trim() || undefined,
-      email: newCustomerEmail.trim() || undefined,
-    })
-  }
+  const updateItem = (i: number, f: keyof CartItem, v: string | number) =>
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [f]: v } : it))
+  const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i))
 
-  const updateItem = (index: number, field: keyof SaleItemInput, value: string | number) => {
-    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)))
-  }
-
-  const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index))
-
-  const runningTotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+  const total = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     setFormError('')
-    setFormSuccess(false)
-    if (items.length === 0) return
-    if (type === 'credit' && (!customerId || customerId === '0')) return
+    if (items.length === 0) { setFormError('Ajoutez au moins un article.'); return }
+    if (type === 'credit' && !customerId) { setFormError('Un client est requis pour une vente à crédit.'); return }
     createMutation.mutate({
-      businessId: bid,
-      type,
-      customerId: customerId && customerId !== '0' ? Number(customerId) : undefined,
-      date: date || today,
-      notes: notes || undefined,
-      items: items.map((item) => ({
-        stockItemId: item.stockItemId,
-        name: item.name,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-      })),
+      businessId: bid, type,
+      customerId: customerId ? Number(customerId) : undefined,
+      date: date || today, notes: notes || undefined,
+      items: items.map(it => ({ stockItemId: it.stockItemId, name: it.name, quantity: Number(it.quantity), unitPrice: Number(it.unitPrice) })),
     })
   }
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Delete this sale?')) deleteMutation.mutate(id)
+  const openPaymentPanel = (s: Sale) => {
+    const remaining = Number(s.totalAmount) - (s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount))
+    setPaymentPanelId(s.id)
+    setPayAmount(remaining > 0 ? String(Number(remaining.toFixed(2))) : '')
+    setPayMethod('cash'); setPayDate(today); setPayNotes('')
   }
 
   const applySearch = (e: FormEvent) => {
     e.preventDefault()
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      if (inputValue.trim()) next.set('search', inputValue.trim())
-      else next.delete('search')
-      next.set('page', '1')
-      return next
+    setSearchParams(prev => {
+      const n = new URLSearchParams(prev)
+      inputValue.trim() ? n.set('search', inputValue.trim()) : n.delete('search')
+      n.set('page', '1'); return n
     })
   }
-
-  const handlePageChange = (p: number) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.set('page', String(p))
-      return next
-    })
-  }
-
-  if (!bid) return (
-    <div className="text-center py-16">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
-        <Icon name="sales" size={28} />
-      </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
-      <p className="text-gray-500">Select a business to view sales.</p>
-    </div>
-  )
-  if (isLoading) return <Loader />
 
   const sales = data?.data ?? []
   const meta = data?.meta
+  const todaySales = sales.filter(s => String(s.date).slice(0, 10) === today)
+  const todayTotal = todaySales.reduce((s, sale) => s + Number(sale.totalAmount), 0)
+
+  if (!bid) return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-4">
+        <Icon name="sales" size={28} />
+      </div>
+      <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Aucun business sélectionné</h2>
+      <p className="text-sm text-zinc-500">Sélectionnez un business pour accéder aux ventes.</p>
+    </div>
+  )
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Sales</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">New Sale</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <Select
-                label="Type"
-                value={type}
-                onChange={(e) => {
-                  const next = e.target.value
-                  setType(next)
-                  if (next === 'credit' && (!customerId || customerId === '0')) setCustomerId('')
-                }}
-                options={[
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'credit', label: 'Credit' },
-                ]}
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Customer {type === 'credit' && <span className="text-red-500">*</span>}
-                </label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Select
-                      value={customerId}
-                      onChange={(e) => setCustomerId(e.target.value)}
-                      options={[
-                        ...(type === 'cash' ? [{ value: '0', label: 'Walk-in customer' }] : []),
-                        ...(customers?.map((c) => ({ value: String(c.id), label: c.name })) || []),
-                      ]}
-                      placeholder="Select customer..."
-                      required={type === 'credit'}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowNewCustomer((v) => !v)}
-                    title="Add new customer"
-                  >
-                    <Icon name="plus" size={16} />
-                  </Button>
-                </div>
-                {showNewCustomer && (
-                  <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">New Customer</p>
-                    <Input
-                      placeholder="Name *"
-                      value={newCustomerName}
-                      onChange={(e) => setNewCustomerName(e.target.value)}
-                    />
-                    <Input
-                      placeholder="Phone (optional)"
-                      value={newCustomerPhone}
-                      onChange={(e) => setNewCustomerPhone(e.target.value)}
-                    />
-                    <Input
-                      type="email"
-                      placeholder="Email (optional)"
-                      value={newCustomerEmail}
-                      onChange={(e) => setNewCustomerEmail(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="flex-1"
-                        loading={createCustomerMutation.isPending}
-                        disabled={!newCustomerName.trim()}
-                        onClick={handleCreateCustomer}
-                      >
-                        Add
-                      </Button>
-                      <Button type="button" size="sm" variant="secondary" onClick={() => setShowNewCustomer(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Add Product</label>
-                <Select
-                  value={selectedStockItemId}
-                  onChange={(e) => handleSelectProduct(e.target.value)}
-                  options={
-                    stockItems
-                      ?.filter((s) => s.quantity > 0)
-                      .map((s) => ({
-                        value: String(s.id),
-                        label: `${s.name} — ${fmt(s.sellingPrice || 0, cur)} (${s.quantity} in stock)`,
-                      })) || []
-                  }
-                  placeholder="Select to add..."
-                />
-              </div>
-
-              {items.length > 0 && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Items</label>
-                  {items.map((item, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)}>✕</Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          type="number"
-                          placeholder="Qty"
-                          value={String(item.quantity)}
-                          onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-                          min={1}
-                          required
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Price"
-                          value={String(item.unitPrice)}
-                          onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value))}
-                          required
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 text-right">Subtotal: {fmt(item.quantity * item.unitPrice, cur)}</p>
-                    </div>
-                  ))}
-                  <div className="bg-emi-violet-light rounded-lg p-3 text-right">
-                    <span className="text-sm font-semibold text-emi-violet">Total: {fmt(runningTotal, cur)}</span>
-                  </div>
-                </div>
-              )}
-
-              {formError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{formError}</div>
-              )}
-              {formSuccess && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium">Sale created successfully!</div>
-              )}
-              <Button type="submit" className="w-full" loading={createMutation.isPending} disabled={items.length === 0 || (type === 'credit' && (!customerId || customerId === '0'))}>
-                Create Sale
-              </Button>
-            </form>
+    <div className="space-y-5">
+      {/* Header + KPIs */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Ventes</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 shadow-sm">
+            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emi-green"><Icon name="trending-up" size={15} /></div>
+            <div>
+              <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">Aujourd'hui</p>
+              <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{fmt(todayTotal, cur)}</p>
+            </div>
+            <div className="w-px h-6 bg-zinc-100 dark:bg-zinc-800 mx-1" />
+            <div>
+              <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">Ventes</p>
+              <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{todaySales.length}</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <form onSubmit={applySearch} className="flex gap-2">
-                <Input
-                  placeholder="Search by reference or customer name…"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                />
-                <Button type="submit" variant="secondary">Search</Button>
-              </form>
+      <div className={`grid gap-5 ${historyOpen ? 'grid-cols-1 lg:grid-cols-5' : 'grid-cols-1 max-w-xl'}`}>
+        {/* ── POS Terminal ──────────────────────────────────────────────── */}
+        <div className={historyOpen ? 'lg:col-span-2' : ''}>
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            {/* Terminal header */}
+            <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                  Nouvelle vente
+                </h2>
+                <button type="button" onClick={resetForm} className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                  Vider
+                </button>
+              </div>
+              {/* Cash / Crédit toggle */}
+              <div className="flex gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+                {(['cash', 'credit'] as const).map((t) => (
+                  <button
+                    key={t} type="button"
+                    onClick={() => { setType(t); if (t === 'cash') { setCustomerId(''); setCustomerName('') } }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      type === t
+                        ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                    }`}
+                  >
+                    {t === 'cash' ? '💵' : '🤝'} {t === 'cash' ? 'Comptant' : 'Crédit'}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {sales.length ? sales.map((s) => {
-                    const actualPaid = s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount)
-                    const remaining = Number(s.totalAmount) - actualPaid
-                    const isPending = s.type === 'credit' && s.status !== 'completed'
-                    const paidPct = s.totalAmount > 0 ? Math.min(100, Math.round((actualPaid / Number(s.totalAmount)) * 100)) : 0
-                    const isOpen = paymentPanelId === s.id
-                    return (
-                      <Fragment key={s.id}>
-                        <tr className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-900">{s.reference}</td>
-                          <td className="px-6 py-4"><Badge variant={s.type === 'cash' ? 'success' : 'info'}>{s.type}</Badge></td>
-                          <td className="px-6 py-4 text-gray-500">{s.customer?.name || 'Walk-in'}</td>
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-gray-900">{fmt(s.totalAmount, cur)}</span>
-                            {isPending && (
-                              <p className="text-xs text-red-500 mt-0.5">{fmt(remaining, cur)} remaining</p>
-                            )}
-                          </td>
-                          <td className="px-6 py-4"><Badge variant={s.status === 'completed' ? 'success' : 'warning'}>{s.status}</Badge></td>
-                          <td className="px-6 py-4 text-gray-500">{s.date}</td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {isPending && (
-                                <Button
-                                  size="sm"
-                                  variant={isOpen ? 'secondary' : 'primary'}
-                                  onClick={() => isOpen ? setPaymentPanelId(null) : openPaymentPanel(s)}
-                                >
-                                  {isOpen ? 'Close' : 'Pay'}
-                                </Button>
-                              )}
-                              <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>Delete</Button>
-                            </div>
-                          </td>
-                        </tr>
-                        {isOpen && (
-                          <tr className="bg-blue-50/40">
-                            <td colSpan={7} className="px-6 py-4">
-                              <div className="space-y-4">
-                                {/* Progress */}
-                                <div>
-                                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                    <span>Paid: <strong className="text-gray-800">{fmt(actualPaid, cur)}</strong></span>
-                                    <span>Total: <strong className="text-gray-800">{fmt(Number(s.totalAmount), cur)}</strong></span>
-                                    <span className="text-red-600 font-medium">Remaining: {fmt(remaining, cur)}</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                      className="bg-emi-violet h-2 rounded-full transition-all"
-                                      style={{ width: `${paidPct}%` }}
-                                    />
-                                  </div>
-                                  <p className="text-xs text-gray-400 mt-1">{paidPct}% paid</p>
-                                </div>
 
-                                {/* Payment history */}
-                                {s.payments && s.payments.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Payment history</p>
-                                    <div className="space-y-1">
-                                      {s.payments.map((p) => (
-                                        <div key={p.id} className="flex items-center justify-between text-sm bg-white rounded-lg px-3 py-2 border border-gray-100">
-                                          <div className="flex items-center gap-3">
-                                            <span className="text-gray-400 text-xs">{p.date}</span>
-                                            <Badge variant="info">{p.paymentMethod.replace('_', ' ')}</Badge>
-                                            {p.notes && <span className="text-gray-400 text-xs italic">{p.notes}</span>}
-                                          </div>
-                                          <span className="font-semibold text-emi-green">+{fmt(p.amount, cur)}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+            <div className="p-4 space-y-4">
+              {/* Customer */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5">
+                  Client {type === 'credit' && <span className="text-red-500">*</span>}
+                  {type === 'cash' && <span className="text-zinc-400 normal-case font-normal"> · optionnel</span>}
+                </label>
+                <CustomerCombobox bid={bid} value={customerId} onChange={(id, name) => { setCustomerId(id); setCustomerName(name) }} required={type === 'credit'} />
+              </div>
 
-                                {/* Add payment form */}
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Add a tranche</p>
-                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      placeholder="Amount"
-                                      value={payAmount}
-                                      onChange={(e) => setPayAmount(e.target.value)}
-                                      min={0.01}
-                                    />
-                                    <Select
-                                      value={payMethod}
-                                      onChange={(e) => setPayMethod(e.target.value)}
-                                      options={[
-                                        { value: 'cash', label: 'Cash' },
-                                        { value: 'transfer', label: 'Transfer' },
-                                        { value: 'mobile_money', label: 'Mobile Money' },
-                                      ]}
-                                    />
-                                    <Input
-                                      type="date"
-                                      value={payDate}
-                                      onChange={(e) => setPayDate(e.target.value)}
-                                    />
-                                    <Input
-                                      placeholder="Notes (optional)"
-                                      value={payNotes}
-                                      onChange={(e) => setPayNotes(e.target.value)}
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    className="mt-2"
-                                    size="sm"
-                                    loading={addPaymentMutation.isPending}
-                                    disabled={!payAmount || Number(payAmount) <= 0}
-                                    onClick={() => addPaymentMutation.mutate({
-                                      saleId: s.id,
-                                      amount: Number(payAmount),
-                                      paymentMethod: payMethod,
-                                      date: payDate,
-                                      notes: payNotes || undefined,
-                                    })}
-                                  >
-                                    Record Payment
-                                  </Button>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    )
-                  }) : (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
-                          <Icon name="sales" size={24} />
-                        </div>
-                        <p className="text-gray-500">{search ? 'No sales match your search.' : 'No sales yet. Add your first sale.'}</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              {/* Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optionnel" />
+              </div>
+
+              {/* Products */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5">Produits</label>
+                <ProductSearch bid={bid} cur={cur} stockItems={stockItems} onAdd={addToCart} />
+              </div>
+
+              {/* Cart */}
+              {items.length > 0 ? (
+                <div className="space-y-2">
+                  {items.map((it, i) => (
+                    <CartRow key={i} item={it} index={i} cur={cur} onUpdate={updateItem} onRemove={removeItem} />
+                  ))}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-xl py-6 text-center">
+                  <p className="text-xs text-zinc-400">Le panier est vide — ajoutez des produits ci-dessus</p>
+                </div>
+              )}
+
+              {/* Manual item */}
+              {!showManual ? (
+                <button
+                  type="button"
+                  onClick={() => setShowManual(true)}
+                  className="text-xs text-zinc-400 hover:text-emi-violet transition-colors flex items-center gap-1"
+                >
+                  <Icon name="plus" size={12} /> Ajouter un article libre
+                </button>
+              ) : (
+                <div className="bg-zinc-50 dark:bg-zinc-800/40 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Article libre</p>
+                  <input value={manualName} onChange={e => setManualName(e.target.value)} placeholder="Nom de l'article *"
+                    className="w-full px-3 py-2 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" min={0} step="0.01" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder="Prix unitaire *"
+                      className="w-full px-3 py-2 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30" />
+                    <input type="number" min={1} value={manualQty} onChange={e => setManualQty(e.target.value)} placeholder="Quantité"
+                      className="w-full px-3 py-2 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" className="flex-1" onClick={addManualItem} disabled={!manualName.trim() || !manualPrice}>Ajouter</Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setShowManual(false)}>Annuler</Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Errors / Success */}
+              {formError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 rounded-xl text-sm text-red-600 dark:text-red-400">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+                  {formError}
+                </div>
+              )}
+              {formSuccess && (
+                <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-sm text-emerald-700 dark:text-emerald-400 font-medium">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                  Vente enregistrée avec succès !
+                </div>
+              )}
             </div>
-            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
+
+            {/* Total + Submit — sticky footer */}
+            <div className="px-4 pb-4 pt-0">
+              <div className={`rounded-2xl p-4 ${items.length > 0 ? 'bg-gradient-to-r from-emi-violet to-violet-500' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-sm font-medium ${items.length > 0 ? 'text-violet-100' : 'text-zinc-500'}`}>
+                    {items.length} article{items.length > 1 ? 's' : ''}
+                  </span>
+                  <span className={`text-2xl font-black ${items.length > 0 ? 'text-white' : 'text-zinc-400'}`}>
+                    {fmt(total, cur)}
+                  </span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={items.length === 0 || createMutation.isPending || (type === 'credit' && !customerId)}
+                  className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                    items.length > 0
+                      ? 'bg-white text-emi-violet hover:bg-violet-50 shadow-lg shadow-violet-900/20'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'
+                  }`}
+                >
+                  {createMutation.isPending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-emi-violet/30 border-t-emi-violet rounded-full animate-spin" />
+                      Enregistrement…
+                    </span>
+                  ) : `Valider la vente · ${fmt(total, cur)}`}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* ── Sales History ─────────────────────────────────────────────── */}
+        <div className={`${historyOpen ? 'lg:col-span-3' : ''} flex flex-col gap-4`}>
+          {/* History panel header */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <button
+              onClick={() => setHistoryOpen(v => !v)}
+              className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors group"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                className={`transition-transform ${historyOpen ? 'rotate-0' : '-rotate-90'}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+              Historique des ventes
+              {meta && <span className="text-xs font-normal text-zinc-400">({meta.total})</span>}
+            </button>
+            {historyOpen && (
+              <div className="flex items-center gap-2">
+                <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 gap-0.5">
+                  <button onClick={() => setViewMode('cards')}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                    Cartes
+                  </button>
+                  <button onClick={() => setViewMode('table')}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                    Tableau
+                  </button>
+                </div>
+                <form onSubmit={applySearch} className="flex gap-1.5">
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Rechercher…"
+                      className="w-44 pl-8 pr-3 py-1.5 rounded-lg text-xs border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all"
+                    />
+                  </div>
+                  <Button type="submit" size="sm" variant="secondary">OK</Button>
+                </form>
+              </div>
+            )}
           </div>
+
+          {historyOpen && (
+            isLoading ? <Loader /> :
+            <>
+              {/* Cards view */}
+              {viewMode === 'cards' && (
+                <div className="space-y-3">
+                  {sales.length ? sales.map((s) => (
+                    <SaleCard
+                      key={s.id} s={s} cur={cur}
+                      paymentPanelId={paymentPanelId}
+                      openPaymentPanel={openPaymentPanel}
+                      closePaymentPanel={() => setPaymentPanelId(null)}
+                      addPaymentMutation={addPaymentMutation}
+                      payAmount={payAmount} setPayAmount={setPayAmount}
+                      payMethod={payMethod} setPayMethod={setPayMethod}
+                      payDate={payDate} setPayDate={setPayDate}
+                      payNotes={payNotes} setPayNotes={setPayNotes}
+                      onDelete={(id) => window.confirm('Supprimer cette vente ?') && deleteMutation.mutate(id)}
+                    />
+                  )) : (
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 py-16 text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-3">
+                        <Icon name="sales" size={22} />
+                      </div>
+                      <p className="text-sm text-zinc-400">{search ? 'Aucune vente ne correspond.' : 'Aucune vente pour le moment.'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Table view */}
+              {viewMode === 'table' && (
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
+                        <tr>
+                          {['Référence','Type','Client','Total','Statut','Date',''].map(h => (
+                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
+                        {sales.length ? sales.map((s) => {
+                          const actualPaid = s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount)
+                          const remaining = Number(s.totalAmount) - actualPaid
+                          const isPending = s.type === 'credit' && s.status !== 'completed'
+                          const isOpen = paymentPanelId === s.id
+                          return (
+                            <Fragment key={s.id}>
+                              <tr className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                                <td className="px-4 py-3 font-medium text-zinc-800 dark:text-zinc-200">{s.reference}</td>
+                                <td className="px-4 py-3"><Badge variant={s.type === 'cash' ? 'success' : 'info'} dot>{s.type}</Badge></td>
+                                <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{s.customer?.name || 'Passage'}</td>
+                                <td className="px-4 py-3">
+                                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{fmt(Number(s.totalAmount), cur)}</span>
+                                  {isPending && <p className="text-xs text-red-500">{fmt(remaining, cur)} restant</p>}
+                                </td>
+                                <td className="px-4 py-3"><Badge variant={s.status === 'completed' ? 'success' : 'warning'} dot>{s.status}</Badge></td>
+                                <td className="px-4 py-3 text-zinc-400 text-xs">{String(s.date).slice(0, 10)}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-1.5 justify-end">
+                                    {isPending && (
+                                      <Button size="sm" variant={isOpen ? 'outline' : 'primary'} onClick={() => isOpen ? setPaymentPanelId(null) : openPaymentPanel(s)}>
+                                        {isOpen ? 'Fermer' : 'Payer'}
+                                      </Button>
+                                    )}
+                                    <Button size="sm" variant="ghost" className="text-red-500" onClick={() => window.confirm('Supprimer ?') && deleteMutation.mutate(s.id)}>×</Button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {isOpen && (
+                                <tr className="bg-violet-50/30 dark:bg-violet-950/10">
+                                  <td colSpan={7} className="px-4 py-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                                      <Input type="number" step="0.01" placeholder="Montant" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+                                      <Select value={payMethod} onChange={e => setPayMethod(e.target.value)} options={[{value:'cash',label:'Cash'},{value:'transfer',label:'Virement'},{value:'mobile_money',label:'Mobile Money'}]} />
+                                      <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
+                                      <Button loading={addPaymentMutation.isPending} disabled={!payAmount || Number(payAmount) <= 0}
+                                        onClick={() => addPaymentMutation.mutate({ saleId: s.id, amount: Number(payAmount), paymentMethod: payMethod, date: payDate, notes: payNotes || undefined })}>
+                                        Enregistrer
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          )
+                        }) : (
+                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-zinc-400">
+                            {search ? 'Aucune vente ne correspond.' : 'Aucune vente pour le moment.'}
+                          </td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  {meta && <Pagination meta={meta} onPageChange={(p) => setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })} />}
+                </div>
+              )}
+
+              {viewMode === 'cards' && meta && meta.lastPage > 1 && (
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                  <Pagination meta={meta} onPageChange={(p) => setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })} />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
