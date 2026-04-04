@@ -1,19 +1,40 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
 import { Icon } from '../components/ui/Icon'
+import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Customer, PaginatedResponse } from '../types'
 
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+const AVATAR_COLORS = [
+  'from-violet-500 to-purple-600',
+  'from-emerald-500 to-teal-600',
+  'from-blue-500 to-indigo-600',
+  'from-amber-500 to-orange-600',
+  'from-rose-500 to-pink-600',
+  'from-cyan-500 to-sky-600',
+]
+
+function avatarColor(id: number) {
+  return AVATAR_COLORS[id % AVATAR_COLORS.length]
+}
+
 export function CustomersPage() {
   const { currentBusiness } = useAppStore()
   const bid = currentBusiness?.id
   const queryClient = useQueryClient()
+
+  const [showModal, setShowModal] = useState(false)
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -25,6 +46,7 @@ export function CustomersPage() {
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? '1')
   const [inputValue, setInputValue] = useState(search)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setInputValue(search) }, [search])
 
@@ -39,6 +61,15 @@ export function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers', bid] })
       resetForm()
+      setShowModal(false)
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...payload }: Record<string, unknown>) => api.put(`/customers/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers', bid] })
+      setEditCustomer(null)
     },
   })
 
@@ -47,32 +78,34 @@ export function CustomersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers', bid] }),
   })
 
-  const resetForm = () => {
-    setName('')
-    setEmail('')
-    setPhone('')
-    setAddress('')
-    setNotes('')
+  const resetForm = () => { setName(''); setEmail(''); setPhone(''); setAddress(''); setNotes('') }
+
+  const openCreate = () => { resetForm(); setShowModal(true) }
+
+  const openEdit = (c: Customer) => {
+    setEditCustomer(c)
+    setName(c.name); setEmail(c.email || ''); setPhone(c.phone || '')
+    setAddress(c.address || ''); setNotes(c.notes || '')
   }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    createMutation.mutate({
-      businessId: bid,
-      name,
+    const payload = {
+      businessId: bid, name,
       email: email || undefined,
       phone: phone || undefined,
       address: address || undefined,
       notes: notes || undefined,
-    })
+    }
+    if (editCustomer) {
+      updateMutation.mutate({ id: editCustomer.id, ...payload })
+    } else {
+      createMutation.mutate(payload)
+    }
   }
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Delete this customer?')) deleteMutation.mutate(id)
-  }
-
-  const applySearch = (e: FormEvent) => {
-    e.preventDefault()
+  const applySearch = (e?: FormEvent) => {
+    e?.preventDefault()
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
       if (inputValue.trim()) next.set('search', inputValue.trim())
@@ -80,6 +113,16 @@ export function CustomersPage() {
       next.set('page', '1')
       return next
     })
+  }
+
+  const clearSearch = () => {
+    setInputValue('')
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('search'); next.set('page', '1')
+      return next
+    })
+    searchRef.current?.focus()
   }
 
   const handlePageChange = (p: number) => {
@@ -91,91 +134,165 @@ export function CustomersPage() {
   }
 
   if (!bid) return (
-    <div className="text-center py-16">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-5">
         <Icon name="customers" size={28} />
       </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
-      <p className="text-gray-500">Select a business to manage customers.</p>
+      <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Aucun business sélectionné</h2>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">Sélectionnez un business pour gérer vos clients.</p>
     </div>
   )
   if (isLoading) return <Loader />
 
   const customers = data?.data ?? []
   const meta = data?.meta
+  const totalCount = meta?.total ?? customers.length
+
+  const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Customer</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Customer name" />
-              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
-              <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 234 567 890" />
-              <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, City, Country" />
-              <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
-              <Button type="submit" className="w-full" loading={createMutation.isPending}>Add Customer</Button>
-            </form>
-          </div>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Clients</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {currentBusiness?.name} · {totalCount} client{totalCount !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <form onSubmit={applySearch} className="flex gap-2">
-                <Input
-                  placeholder="Search by name, email or phone…"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                />
-                <Button type="submit" variant="secondary">Search</Button>
-              </form>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {customers.length ? customers.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        <Link to={`/customers/${c.id}`} className="text-emi-violet hover:underline">{c.name}</Link>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500">{c.email || '-'}</td>
-                      <td className="px-6 py-4 text-gray-500">{c.phone || '-'}</td>
-                      <td className="px-6 py-4 text-gray-500">{c.address || '-'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>Delete</Button>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
-                          <Icon name="customers" size={24} />
-                        </div>
-                        <p className="text-gray-500">{search ? 'No customers match your search.' : 'No customers yet. Add your first customer.'}</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
-          </div>
-        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Icon name="plus" size={15} className="mr-1" /> Nouveau client
+        </Button>
       </div>
+
+      {/* Search bar */}
+      <div className="relative">
+        <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+        <input
+          ref={searchRef}
+          type="text"
+          placeholder="Rechercher par nom, email ou téléphone…"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && applySearch()}
+          className="w-full pl-9 pr-8 py-2.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-2 focus:ring-emi-violet/20 shadow-sm transition"
+        />
+        {inputValue && (
+          <button type="button" onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+            <Icon name="x" size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Customer grid */}
+      {customers.length ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {customers.map(c => (
+            <div key={c.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all p-4 flex flex-col gap-3">
+              {/* Avatar + name */}
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarColor(c.id)} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+                  {getInitials(c.name)}
+                </div>
+                <div className="min-w-0">
+                  <Link
+                    to={`/customers/${c.id}`}
+                    className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-emi-violet transition-colors text-sm leading-tight line-clamp-1"
+                  >
+                    {c.name}
+                  </Link>
+                  {c.email && (
+                    <p className="text-xs text-zinc-400 truncate mt-0.5">{c.email}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact chips */}
+              <div className="flex flex-col gap-1">
+                {c.phone && (
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.7A2 2 0 012.18 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.15a16 16 0 006.94 6.94l1.41-1.41a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                    </svg>
+                    <span>{c.phone}</span>
+                  </div>
+                )}
+                {c.address && (
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <span className="truncate">{c.address}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <Link
+                  to={`/customers/${c.id}`}
+                  className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet hover:bg-emi-violet hover:text-white transition-colors"
+                >
+                  <Icon name="chevron-right" size={12} /> Détails
+                </Link>
+                <button
+                  onClick={() => openEdit(c)}
+                  className="p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  title="Modifier"
+                >
+                  <Icon name="edit" size={14} />
+                </button>
+                <button
+                  onClick={() => { if (window.confirm('Supprimer ce client ?')) deleteMutation.mutate(c.id) }}
+                  className="p-1.5 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 transition-colors"
+                  title="Supprimer"
+                >
+                  <Icon name="trash" size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm py-16 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-4">
+            <Icon name="customers" size={26} />
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {search ? 'Aucun client ne correspond à votre recherche.' : 'Aucun client pour l\'instant. Ajoutez votre premier client.'}
+          </p>
+          {!search && (
+            <button onClick={openCreate} className="mt-3 text-sm text-emi-violet hover:underline">
+              + Ajouter un client
+            </button>
+          )}
+        </div>
+      )}
+
+      {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
+
+      {/* Create / Edit Modal */}
+      <Modal
+        isOpen={showModal || !!editCustomer}
+        onClose={() => { setShowModal(false); setEditCustomer(null); resetForm() }}
+        title={editCustomer ? 'Modifier le client' : 'Nouveau client'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Input label="Nom *" value={name} onChange={e => setName(e.target.value)} required placeholder="Nom complet" />
+          <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemple.com" />
+          <Input label="Téléphone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+XXX XX XX XX XX" />
+          <Input label="Adresse" value={address} onChange={e => setAddress(e.target.value)} placeholder="Rue, Ville, Pays" />
+          <Input label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optionnel" />
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => { setShowModal(false); setEditCustomer(null); resetForm() }} className="flex-1">
+              Annuler
+            </Button>
+            <Button type="submit" className="flex-1" loading={isPending}>
+              {editCustomer ? 'Enregistrer' : 'Créer'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
