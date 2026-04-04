@@ -116,25 +116,24 @@ export function AppLayout() {
   }, [currentRole])
 
   const settingsNav = useMemo(() => {
-    const items = isSuperAdmin
-      ? [
-          { to: '/organizations', label: 'Organisations', icon: 'businesses', roles: ['admin'] },
-          { to: '/businesses',    label: 'Businesses',    icon: 'businesses', roles: ['admin'] },
-          { to: '/users',         label: 'Équipe',        icon: 'users',      roles: ['admin'] },
-        ]
-      : [
-          { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
-          { to: '/users',      label: 'Équipe',     icon: 'users',      roles: ['admin'] },
-        ]
+    const items = [
+      { to: '/businesses', label: 'Businesses', icon: 'businesses', roles: ['admin'] },
+      { to: '/users',      label: 'Équipe',     icon: 'users',      roles: ['admin'] },
+    ]
     if (!currentRole) return []
     return items.filter((i) => i.roles.includes(currentRole))
-  }, [currentRole, isSuperAdmin])
+  }, [currentRole])
+
+  const closeSidebarOnMobile = () => {
+    if (window.innerWidth < 1024) setSidebarOpen(false)
+  }
 
   const renderNav = (items: typeof mainNav) =>
     items.map((item) => (
       <NavLink
         key={item.to}
         to={item.to}
+        onClick={closeSidebarOnMobile}
         className={({ isActive }) =>
           `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
             isActive
@@ -200,13 +199,13 @@ export function AppLayout() {
         transition-transform duration-300 ease-out
       `}>
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-white/[0.06]">
+        <NavLink to="/dashboard" onClick={closeSidebarOnMobile} className="flex items-center gap-2.5 px-4 py-4 border-b border-white/[0.06] hover:opacity-80 transition-opacity">
           <img src="/icon.png" alt="EMI" className="w-8 h-8 rounded-xl" />
           <div>
             <h1 className="text-[15px] font-bold tracking-tight text-white" style={{ fontFamily: "'Montserrat', sans-serif" }}>EMI</h1>
             <p className="text-[9px] font-medium uppercase tracking-widest text-zinc-600 leading-none mt-0.5">Opérations Réussies</p>
           </div>
-        </div>
+        </NavLink>
 
         {/* Business selector */}
         <div className="px-3 py-3 border-b border-white/[0.06]" ref={bizMenuRef}>
@@ -271,7 +270,7 @@ export function AppLayout() {
                     <div className="border-t border-white/[0.06] p-1.5">
                       <NavLink
                         to="/businesses"
-                        onClick={() => setShowBizMenu(false)}
+                        onClick={() => { setShowBizMenu(false); closeSidebarOnMobile() }}
                         className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-500 hover:text-emi-violet hover:bg-emi-violet/10 rounded-lg transition-colors"
                       >
                         <Icon name="plus" size={12} /><span>Gérer les businesses</span>
@@ -284,6 +283,7 @@ export function AppLayout() {
           ) : isAnyAdmin ? (
             <NavLink
               to="/businesses"
+              onClick={closeSidebarOnMobile}
               className="flex items-center justify-center gap-2 text-xs text-emi-violet hover:text-violet-300 py-2.5 px-3 rounded-xl border border-dashed border-emi-violet/30 hover:border-emi-violet/50 transition-colors"
             >
               <Icon name="plus" size={13} /><span>Créer un business</span>
@@ -315,22 +315,55 @@ export function AppLayout() {
         {/* Footer */}
         <div className="px-3 py-3 border-t border-white/[0.06] space-y-1">
           <ThemeToggle />
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl">
+          {/* User info row */}
+          <div className="flex items-center gap-2.5 px-2 py-2">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emi-violet to-emi-violet-dark text-white flex items-center justify-center text-[11px] font-bold shrink-0">
-              {user?.initials || '??'}
+              {(() => {
+                const name = user?.fullName?.trim()
+                if (name) return name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+                const email = user?.email?.trim()
+                if (email) return email.charAt(0).toUpperCase()
+                return <Icon name="users" size={13} />
+              })()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-zinc-200 truncate">{user?.fullName || user?.email}</p>
-              <p className="text-[10px] text-zinc-600 truncate">{user?.email}</p>
+              <p className="text-xs font-semibold text-zinc-200 truncate leading-tight">
+                {user?.fullName?.trim() || user?.email || '—'}
+              </p>
+              {user?.fullName && (
+                <p className="text-[10px] text-zinc-600 truncate">{user.email}</p>
+              )}
             </div>
-            <button
-              onClick={handleLogout}
-              title="Déconnexion"
-              className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-white/6"
-            >
-              <Icon name="logout" size={14} />
-            </button>
           </div>
+          {/* Settings link */}
+          <NavLink
+            to="/settings"
+            onClick={closeSidebarOnMobile}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-white/12 text-white'
+                  : 'text-zinc-400 hover:bg-white/6 hover:text-zinc-200'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className={`shrink-0 transition-colors ${isActive ? 'text-emi-violet' : 'text-zinc-500'}`}>
+                  <Icon name="settings" size={17} />
+                </span>
+                <span>Paramètres</span>
+              </>
+            )}
+          </NavLink>
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
+          >
+            <Icon name="logout" size={17} />
+            <span>Déconnexion</span>
+          </button>
         </div>
       </aside>
 
@@ -341,10 +374,10 @@ export function AppLayout() {
           <button onClick={toggleSidebar} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             <Icon name="menu" size={22} />
           </button>
-          <div className="flex items-center gap-2">
+          <NavLink to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="/icon.png" alt="EMI" className="w-7 h-7 rounded-lg" />
             <span className="text-sm font-bold text-emi-violet" style={{ fontFamily: "'Montserrat', sans-serif" }}>EMI</span>
-          </div>
+          </NavLink>
           <div className="w-8" />
         </header>
 

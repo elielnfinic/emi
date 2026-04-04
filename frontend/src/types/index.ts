@@ -203,6 +203,11 @@ export interface Rotation {
   updatedAt: string | null
 }
 
+export interface RotationDetail extends Rotation {
+  transactions: Transaction[]
+  sales: Sale[]
+}
+
 export interface BusinessUser {
   id: number
   businessId: number

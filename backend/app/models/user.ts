@@ -5,6 +5,7 @@ import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { type AccessToken, DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import { column, belongsTo, hasMany } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
+import { DateTime } from 'luxon'
 import Organization from '#models/organization'
 import Role from '#models/role'
 import BusinessUser from '#models/business_user'
@@ -18,6 +19,15 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
 
   @column()
   declare roleId: number | null
+
+  @column()
+  declare pendingEmail: string | null
+
+  @column()
+  declare emailOtp: string | null
+
+  @column.dateTime()
+  declare emailOtpExpiresAt: DateTime | null
 
   @belongsTo(() => Organization)
   declare organization: BelongsTo<typeof Organization>

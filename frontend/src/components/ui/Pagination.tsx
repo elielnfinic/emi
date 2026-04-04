@@ -8,6 +8,8 @@ interface PaginationProps {
 export function Pagination({ meta, onPageChange }: PaginationProps) {
   const { currentPage, lastPage, total, perPage } = meta
 
+  if (lastPage <= 1) return null
+
   const from = total === 0 ? 0 : (currentPage - 1) * perPage + 1
   const to = Math.min(currentPage * perPage, total)
 

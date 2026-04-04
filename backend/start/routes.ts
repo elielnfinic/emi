@@ -45,6 +45,10 @@ router
     router
       .group(() => {
         router.get('/profile', [controllers.Profile, 'show'])
+        router.put('/profile', [controllers.Profile, 'updateProfile'])
+        router.put('/password', [controllers.Profile, 'updatePassword'])
+        router.post('/email/request', [controllers.Profile, 'requestEmailChange'])
+        router.post('/email/verify', [controllers.Profile, 'verifyEmailChange'])
       })
       .prefix('account')
       .as('profile')
@@ -71,6 +75,7 @@ router
         router.delete('businesses/:id', [BusinessesController, 'destroy'])
 
         // Transactions CRUD
+        router.get('transactions/beneficiaries', [TransactionsController, 'beneficiaries'])
         router.get('transactions', [TransactionsController, 'index'])
         router.post('transactions', [TransactionsController, 'store'])
         router.get('transactions/:id', [TransactionsController, 'show'])
@@ -136,6 +141,9 @@ router
         router.get('reports/sales', [ReportsController, 'salesReport'])
         router.get('reports/transactions', [ReportsController, 'transactionsReport'])
         router.get('reports/stock', [ReportsController, 'stockReport'])
+
+        // Admin
+        router.put('admin/users/:id', [controllers.Profile, 'adminUpdateUser'])
       })
       .use(middleware.auth())
   })

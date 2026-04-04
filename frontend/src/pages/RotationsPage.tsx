@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
@@ -114,12 +115,13 @@ export function RotationsPage() {
             {active.map(r => (
               <div key={r.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-4 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-zinc-900 dark:text-zinc-100">{r.name}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">Depuis {r.startDate}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{r.name}</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">Depuis le {r.startDate}</p>
                   </div>
                   <Badge variant="success" dot>Active</Badge>
                 </div>
+
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2">
                     <p className="text-zinc-400">Capital initial</p>
@@ -130,16 +132,23 @@ export function RotationsPage() {
                     <p className="font-semibold text-zinc-800 dark:text-zinc-200">{daysBetween(r.startDate)} j</p>
                   </div>
                 </div>
+
                 {r.notes && <p className="text-xs text-zinc-400 italic">{r.notes}</p>}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  loading={closeMutation.isPending}
-                  onClick={() => { if (window.confirm('Clôturer cette rotation ?')) closeMutation.mutate(r.id) }}
-                >
-                  Clôturer
-                </Button>
+
+                <div className="flex gap-2">
+                  <Link
+                    to={`/rotations/${r.id}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold bg-emi-violet text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Icon name="bar-chart" size={13} /> Explorer
+                  </Link>
+                  <button
+                    className="px-3 py-2 rounded-xl text-sm font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                    onClick={() => { if (window.confirm('Clôturer cette rotation ?')) closeMutation.mutate(r.id) }}
+                  >
+                    Clôturer
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -153,18 +162,30 @@ export function RotationsPage() {
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {closed.map(r => (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3 gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{r.name}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      {r.startDate} → {r.endDate ?? '?'} · {daysBetween(r.startDate, r.endDate)} jours
-                    </p>
+                <Link
+                  key={r.id}
+                  to={`/rotations/${r.id}`}
+                  className="flex items-center justify-between px-4 py-3.5 gap-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center shrink-0">
+                      <Icon name="rotations" size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{r.name}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        {r.startDate} → {r.endDate ?? '?'} · {daysBetween(r.startDate, r.endDate)} jours
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{fmt(Number(r.initialCapital), cur)}</p>
-                    <Badge variant="default">Clôturée</Badge>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{fmt(Number(r.initialCapital), cur)}</p>
+                      <Badge variant="default">Clôturée</Badge>
+                    </div>
+                    <Icon name="chevron-right" size={15} className="text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 transition-colors" />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -176,9 +197,12 @@ export function RotationsPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-4">
             <Icon name="rotations" size={26} />
           </div>
-          <p className="text-sm text-zinc-400">Aucune rotation. Démarrez votre première rotation.</p>
-          <button onClick={() => { resetForm(); setShowModal(true) }} className="mt-2 text-sm text-emi-violet hover:underline">
-            + Créer une rotation
+          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Aucune rotation.</p>
+          <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
+            Une rotation représente un cycle complet : investissement → achats → ventes → bénéfice.
+          </p>
+          <button onClick={() => { resetForm(); setShowModal(true) }} className="mt-3 text-sm text-emi-violet hover:underline">
+            + Démarrer une rotation
           </button>
         </div>
       )}

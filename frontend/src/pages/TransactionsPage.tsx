@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
@@ -13,6 +13,164 @@ import { StatCard } from '../components/ui/Card'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Transaction, PaginatedResponse } from '../types'
+
+/* ─── BeneficiaryAutocomplete ──────────────────────────────────── */
+
+interface BeneficiaryMeta { total: number; perPage: number; currentPage: number; lastPage: number }
+interface BeneficiaryResult { data: string[]; meta: BeneficiaryMeta }
+
+function BeneficiaryAutocomplete({
+  value, onChange, businessId,
+}: {
+  value: string
+  onChange: (v: string) => void
+  businessId: number | undefined
+}) {
+  const [open, setOpen] = useState(false)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [accumulated, setAccumulated] = useState<string[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const prevSearchRef = useRef('')
+
+  const { data, isFetching } = useQuery<BeneficiaryResult>({
+    queryKey: ['tx-beneficiaries', businessId, debouncedSearch, page],
+    queryFn: async () =>
+      (await api.get('/transactions/beneficiaries', {
+        params: { business_id: businessId, search: debouncedSearch, page, per_page: 12 },
+      })).data,
+    enabled: !!businessId && open,
+    staleTime: 30_000,
+  })
+
+  // Accumulate pages; reset when search changes
+  useEffect(() => {
+    if (!data?.data) return
+    if (debouncedSearch !== prevSearchRef.current || page === 1) {
+      setAccumulated(data.data)
+      prevSearchRef.current = debouncedSearch
+    } else {
+      setAccumulated(prev => {
+        const next = [...prev]
+        data.data.forEach(b => { if (!next.includes(b)) next.push(b) })
+        return next
+      })
+    }
+  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Click-outside
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    onChange(v)
+    setOpen(true)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(v)
+      setPage(1)
+      setAccumulated([])
+    }, 280)
+  }
+
+  const handleSelect = (b: string) => {
+    onChange(b)
+    setOpen(false)
+  }
+
+  const loadMore = () => setPage(p => p + 1)
+  const hasMore = !!data?.meta && data.meta.currentPage < data.meta.lastPage
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      {/* Label */}
+      <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5">
+        Bénéficiaire
+      </label>
+
+      {/* Input */}
+      <input
+        type="text"
+        value={value}
+        onChange={handleChange}
+        onFocus={() => setOpen(true)}
+        placeholder="Nom du bénéficiaire"
+        autoComplete="off"
+        className="w-full px-3 py-2.5 rounded-lg text-sm border transition-all duration-150 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet border-zinc-200 dark:border-zinc-700"
+      />
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden max-h-60 flex flex-col">
+          <div className="overflow-y-auto flex-1">
+            {accumulated.length > 0 ? (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {accumulated.map(b => (
+                  <button
+                    key={b}
+                    type="button"
+                    onMouseDown={e => { e.preventDefault(); handleSelect(b) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-violet-50 dark:hover:bg-violet-950/20 hover:text-emi-violet transition-colors text-left"
+                  >
+                    <Icon name="users" size={12} className="text-zinc-300 dark:text-zinc-600 shrink-0" />
+                    <span className="truncate">{b}</span>
+                  </button>
+                ))}
+              </div>
+            ) : !isFetching ? (
+              <div className="px-4 py-4 text-center">
+                <p className="text-xs text-zinc-400">
+                  {debouncedSearch ? `Aucun résultat pour "${debouncedSearch}"` : 'Aucun bénéficiaire enregistré'}
+                </p>
+              </div>
+            ) : null}
+
+            {isFetching && (
+              <div className="flex items-center justify-center gap-2 py-3 text-xs text-zinc-400">
+                <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+                Chargement…
+              </div>
+            )}
+          </div>
+
+          {/* Load more */}
+          {hasMore && !isFetching && (
+            <button
+              type="button"
+              onMouseDown={e => { e.preventDefault(); loadMore() }}
+              className="flex items-center justify-center gap-1.5 py-2.5 border-t border-zinc-100 dark:border-zinc-800 text-xs font-medium text-emi-violet hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors"
+            >
+              <Icon name="arrow-down" size={11} />
+              Charger plus ({data.meta.total - accumulated.length} restants)
+            </button>
+          )}
+
+          {/* Footer count */}
+          {accumulated.length > 0 && data?.meta && (
+            <div className="px-4 py-1.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+              <p className="text-[10px] text-zinc-400">
+                {accumulated.length} sur {data.meta.total} bénéficiaire{data.meta.total !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 
 function fmt(n: number, currency = 'USD') {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
@@ -59,7 +217,7 @@ export function TransactionsPage() {
       resetForm()
       setShowModal(false)
       setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
+      setTimeout(() => setShowSuccess(false), 4000)
     },
   })
 
@@ -145,11 +303,14 @@ export function TransactionsPage() {
     <div className="space-y-5">
       {/* Success toast */}
       {showSuccess && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in ${successType === 'income' ? 'bg-emi-green' : 'bg-red-500'}`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-          <span className="font-medium text-sm">
-            {successType === 'income' ? 'Entrée enregistrée !' : 'Dépense enregistrée !'}
-          </span>
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 text-white px-6 py-4 rounded-2xl shadow-2xl animate-fade-in ${successType === 'income' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+          </div>
+          <div>
+            <p className="font-semibold text-sm">{successType === 'income' ? 'Entrée enregistrée !' : 'Dépense enregistrée !'}</p>
+            <p className="text-xs text-white/80 mt-0.5">La transaction a bien été sauvegardée.</p>
+          </div>
         </div>
       )}
 
@@ -310,7 +471,7 @@ export function TransactionsPage() {
           </div>
           <Input label="Montant *" type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="0.00" />
           <Input label="Description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Loyer, salaire, etc." />
-          <Input label="Bénéficiaire" value={beneficiary} onChange={e => setBeneficiary(e.target.value)} placeholder="Nom du bénéficiaire" />
+          <BeneficiaryAutocomplete value={beneficiary} onChange={setBeneficiary} businessId={bid} />
           <Input label="Date" type="date" value={date} onChange={e => setDate(e.target.value)} />
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Annuler</Button>
