@@ -25,49 +25,49 @@ export function Pagination({ meta, onPageChange }: PaginationProps) {
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-      <p className="text-sm text-gray-500">
+    <div className="flex items-center justify-between px-5 py-3.5 border-t border-zinc-100 dark:border-zinc-800">
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
         {total === 0
-          ? 'No results'
-          : <>Showing <span className="font-medium">{from}</span>–<span className="font-medium">{to}</span> of <span className="font-medium">{total}</span></>
+          ? 'Aucun résultat'
+          : <><span className="font-medium text-zinc-700 dark:text-zinc-300">{from}–{to}</span> sur <span className="font-medium text-zinc-700 dark:text-zinc-300">{total}</span></>
         }
       </p>
       {lastPage > 1 && (
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            ‹
-          </button>
+          <PageBtn onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>‹</PageBtn>
           {pages.map((p, i) =>
             p === '...' ? (
-              <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-sm text-gray-400">…</span>
+              <span key={`e-${i}`} className="px-1 text-xs text-zinc-400">…</span>
             ) : (
-              <button
+              <PageBtn
                 key={p}
+                active={p === currentPage}
                 onClick={() => onPageChange(p as number)}
-                style={p === currentPage ? { backgroundColor: '#7B5CF6', color: '#fff' } : undefined}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
-                  p === currentPage
-                    ? 'border-transparent'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
               >
                 {p}
-              </button>
+              </PageBtn>
             )
           )}
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === lastPage}
-            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            ›
-          </button>
+          <PageBtn onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === lastPage}>›</PageBtn>
         </div>
       )}
     </div>
+  )
+}
+
+function PageBtn({ children, active, disabled, onClick }: { children: React.ReactNode; active?: boolean; disabled?: boolean; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`min-w-[30px] h-[30px] px-1.5 text-xs font-medium rounded-lg transition-colors
+        disabled:opacity-40 disabled:cursor-not-allowed
+        ${active
+          ? 'bg-emi-violet text-white shadow-sm shadow-emi-violet/25'
+          : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+        }`}
+    >
+      {children}
+    </button>
   )
 }

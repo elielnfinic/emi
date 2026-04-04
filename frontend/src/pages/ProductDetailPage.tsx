@@ -305,7 +305,7 @@ export function ProductDetailPage() {
           icon={<Icon name="package" size={22} />}
         />
         <StatCard title="Total Stock-In" value={totalIn} color="blue" icon={<Icon name="arrow-down" size={22} />} />
-        <StatCard title="Total Stock-Out" value={totalOut} color="yellow" icon={<Icon name="arrow-up" size={22} />} />
+        <StatCard title="Total Stock-Out" value={totalOut} color="amber" icon={<Icon name="arrow-up" size={22} />} />
         <StatCard title="Sales Revenue" value={fmt(totalSalesAmount, cur)} color="violet" icon={<Icon name="sales" size={22} />} />
       </div>
 

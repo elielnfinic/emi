@@ -41,11 +41,20 @@ export interface ApiDefinition {
     destroy: typeof routes['transactions.destroy']
   }
   stockItems: {
+    categories: typeof routes['stock_items.categories']
     index: typeof routes['stock_items.index']
     store: typeof routes['stock_items.store']
     show: typeof routes['stock_items.show']
     update: typeof routes['stock_items.update']
     destroy: typeof routes['stock_items.destroy']
+  }
+  stockTransactions: {
+    index: typeof routes['stock_transactions.index']
+    store: typeof routes['stock_transactions.store']
+    bulkMoveRotation: typeof routes['stock_transactions.bulk_move_rotation']
+    show: typeof routes['stock_transactions.show']
+    update: typeof routes['stock_transactions.update']
+    destroy: typeof routes['stock_transactions.destroy']
   }
   customers: {
     index: typeof routes['customers.index']

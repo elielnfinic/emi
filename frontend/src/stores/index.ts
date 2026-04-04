@@ -52,3 +52,28 @@ export const useAppStore = create<AppState>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
 }))
+
+type Theme = 'light' | 'dark'
+
+interface ThemeState {
+  theme: Theme
+  setTheme: (theme: Theme) => void
+  toggle: () => void
+}
+
+const savedTheme = (localStorage.getItem('emi_theme') as Theme) || 'light'
+// Apply on init
+document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+
+export const useThemeStore = create<ThemeState>((set, get) => ({
+  theme: savedTheme,
+  setTheme: (theme) => {
+    localStorage.setItem('emi_theme', theme)
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    set({ theme })
+  },
+  toggle: () => {
+    const next = get().theme === 'light' ? 'dark' : 'light'
+    get().setTheme(next)
+  },
+}))

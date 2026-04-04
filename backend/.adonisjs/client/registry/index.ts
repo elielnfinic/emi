@@ -126,6 +126,12 @@ const routes = {
     tokens: [{"old":"/api/v1/transactions/:id","type":0,"val":"api","end":""},{"old":"/api/v1/transactions/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/transactions/:id","type":0,"val":"transactions","end":""},{"old":"/api/v1/transactions/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['transactions.destroy']['types'],
   },
+  'stock_items.categories': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/stock-items/categories',
+    tokens: [{"old":"/api/v1/stock-items/categories","type":0,"val":"api","end":""},{"old":"/api/v1/stock-items/categories","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-items/categories","type":0,"val":"stock-items","end":""},{"old":"/api/v1/stock-items/categories","type":0,"val":"categories","end":""}],
+    types: placeholder as Registry['stock_items.categories']['types'],
+  },
   'stock_items.index': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/stock-items',
@@ -155,6 +161,42 @@ const routes = {
     pattern: '/api/v1/stock-items/:id',
     tokens: [{"old":"/api/v1/stock-items/:id","type":0,"val":"api","end":""},{"old":"/api/v1/stock-items/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-items/:id","type":0,"val":"stock-items","end":""},{"old":"/api/v1/stock-items/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['stock_items.destroy']['types'],
+  },
+  'stock_transactions.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/stock-transactions',
+    tokens: [{"old":"/api/v1/stock-transactions","type":0,"val":"api","end":""},{"old":"/api/v1/stock-transactions","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-transactions","type":0,"val":"stock-transactions","end":""}],
+    types: placeholder as Registry['stock_transactions.index']['types'],
+  },
+  'stock_transactions.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/stock-transactions',
+    tokens: [{"old":"/api/v1/stock-transactions","type":0,"val":"api","end":""},{"old":"/api/v1/stock-transactions","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-transactions","type":0,"val":"stock-transactions","end":""}],
+    types: placeholder as Registry['stock_transactions.store']['types'],
+  },
+  'stock_transactions.bulk_move_rotation': {
+    methods: ["POST"],
+    pattern: '/api/v1/stock-transactions/bulk-move-rotation',
+    tokens: [{"old":"/api/v1/stock-transactions/bulk-move-rotation","type":0,"val":"api","end":""},{"old":"/api/v1/stock-transactions/bulk-move-rotation","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-transactions/bulk-move-rotation","type":0,"val":"stock-transactions","end":""},{"old":"/api/v1/stock-transactions/bulk-move-rotation","type":0,"val":"bulk-move-rotation","end":""}],
+    types: placeholder as Registry['stock_transactions.bulk_move_rotation']['types'],
+  },
+  'stock_transactions.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/stock-transactions/:id',
+    tokens: [{"old":"/api/v1/stock-transactions/:id","type":0,"val":"api","end":""},{"old":"/api/v1/stock-transactions/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-transactions/:id","type":0,"val":"stock-transactions","end":""},{"old":"/api/v1/stock-transactions/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['stock_transactions.show']['types'],
+  },
+  'stock_transactions.update': {
+    methods: ["PUT"],
+    pattern: '/api/v1/stock-transactions/:id',
+    tokens: [{"old":"/api/v1/stock-transactions/:id","type":0,"val":"api","end":""},{"old":"/api/v1/stock-transactions/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-transactions/:id","type":0,"val":"stock-transactions","end":""},{"old":"/api/v1/stock-transactions/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['stock_transactions.update']['types'],
+  },
+  'stock_transactions.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/stock-transactions/:id',
+    tokens: [{"old":"/api/v1/stock-transactions/:id","type":0,"val":"api","end":""},{"old":"/api/v1/stock-transactions/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/stock-transactions/:id","type":0,"val":"stock-transactions","end":""},{"old":"/api/v1/stock-transactions/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['stock_transactions.destroy']['types'],
   },
   'customers.index': {
     methods: ["GET","HEAD"],

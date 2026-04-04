@@ -3,19 +3,32 @@ import type { InputHTMLAttributes } from 'react'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  hint?: string
 }
 
-export function Input({ label, error, className = '', id, ...props }: InputProps) {
+export function Input({ label, error, hint, className = '', id, ...props }: InputProps) {
   const inputId = id || label?.toLowerCase().replace(/\s+/g, '-')
   return (
     <div className="w-full">
-      {label && <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      {label && (
+        <label htmlFor={inputId} className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5">
+          {label}
+        </label>
+      )}
       <input
         id={inputId}
-        className={`w-full px-3 py-2 border rounded-lg text-sm border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-colors disabled:opacity-50 ${error ? 'border-red-500' : ''} ${className}`}
+        className={`w-full px-3 py-2.5 rounded-lg text-sm border transition-all duration-150
+          bg-white dark:bg-zinc-900
+          text-zinc-900 dark:text-zinc-100
+          placeholder-zinc-400 dark:placeholder-zinc-600
+          focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet
+          disabled:opacity-50 disabled:cursor-not-allowed
+          ${error ? 'border-red-500 dark:border-red-500' : 'border-zinc-200 dark:border-zinc-700'}
+          ${className}`}
         {...props}
       />
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-zinc-400">{hint}</p>}
     </div>
   )
 }

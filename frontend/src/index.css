@@ -1,14 +1,16 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-emi-violet: #7B5CF6;
+  --color-emi-violet: #7C3AED;
   --color-emi-violet-light: #EDE9FE;
-  --color-emi-violet-dark: #5B3FD4;
-  --color-emi-green: #00C853;
-  --color-emi-green-light: #E8F5E9;
-  --color-emi-green-dark: #00A844;
-  --color-emi-dark: #1A1A2E;
-  --color-emi-gray: #3D3D3D;
+  --color-emi-violet-dark: #6D28D9;
+  --color-emi-green: #10B981;
+  --color-emi-green-light: #D1FAE5;
+  --color-emi-green-dark: #059669;
+  --color-emi-dark: #0A0A0F;
+  --color-sidebar: #0A0A0F;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 :root {
@@ -19,24 +21,94 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
+  background: #F8F8FB;
+  color: #09090B;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+.dark body {
+  background: #09090B;
+  color: #FAFAFA;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.25); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,0.45); }
+
+/* Animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+.animate-fade-up   { animation: fade-up 0.35s cubic-bezier(.22,1,.36,1) both; }
+.animate-fade-in   { animation: fade-in 0.25s ease both; }
+.animate-slide-in  { animation: slide-in-left 0.25s ease both; }
+.animate-scale-in  { animation: scale-in 0.2s cubic-bezier(.22,1,.36,1) both; }
+
+/* ── Global dark-mode page overrides ──────────────────────────────────────── */
+/* These handle Tailwind utility classes used in pages that aren't explicitly
+   dark-mode-aware, so we don't have to touch every page. */
+
+.dark .bg-white     { background-color: #18181b; } /* zinc-900 */
+.dark .bg-gray-50   { background-color: #27272a; } /* zinc-800 */
+.dark .bg-white\/95 { background-color: rgba(24,24,27,.96); }
+
+.dark .border-gray-100 { border-color: #27272a; }
+.dark .border-gray-200 { border-color: #3f3f46; }
+.dark .border-gray-300 { border-color: #52525b; }
+
+.dark .text-gray-900 { color: #fafafa; }
+.dark .text-gray-800 { color: #e4e4e7; }
+.dark .text-gray-700 { color: #d4d4d8; }
+.dark .text-gray-600 { color: #a1a1aa; }
+.dark .text-gray-500 { color: #71717a; }
+.dark .text-gray-400 { color: #52525b; }
+
+.dark .divide-gray-100 > * + * { border-color: #27272a; }
+.dark .divide-gray-200 > * + * { border-color: #3f3f46; }
+
+.dark .hover\:bg-gray-50:hover  { background-color: rgba(39,39,42,.5) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: rgba(39,39,42,.8) !important; }
+.dark .hover\:bg-gray-200:hover { background-color: #3f3f46 !important; }
+
+.dark .focus\:border-emi-violet:focus { border-color: #7c3aed; }
+.dark .focus\:ring-emi-violet\/30:focus { --tw-ring-color: rgba(124,58,237,.3); }
+
+/* Table header */
+.dark thead.bg-gray-50,
+.dark thead > tr.bg-gray-50 { background-color: #1c1c22; }
+
+/* Rounded card shorthand (used heavily in pages) */
+.dark .rounded-xl.shadow-sm.border.border-gray-200 {
+  background-color: #18181b;
+  border-color: #3f3f46;
 }
 
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-slide-in {
-  animation: slide-in 0.25s ease-out;
+/* ── Recharts overrides ─────────────────────────────────────────────────────*/
+.recharts-tooltip-wrapper { outline: none !important; }
+.recharts-default-tooltip {
+  border-radius: 10px !important;
+  border: 1px solid rgba(124,58,237,0.15) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
 }
