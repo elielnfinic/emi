@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores'
 import { Icon } from '../components/ui/Icon'
@@ -55,10 +55,41 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
   )
 }
 
+interface ProfileData {
+  id: number
+  fullName: string | null
+  email: string
+  role: string | null
+  businessRoles: Record<number, string>
+}
+
+function useProfileData() {
+  const { setUser } = useAuthStore()
+  return useQuery<ProfileData>({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const res = await api.get('/account/profile')
+      const profile = res.data?.data ?? res.data
+      setUser(profile)
+      return profile
+    },
+    staleTime: 0, // always refetch when navigating to settings
+  })
+}
+
 function ProfileTab() {
   const { user, setUser } = useAuthStore()
-  const [fullName, setFullName] = useState(user?.fullName ?? '')
+  const { data: profile, isLoading } = useProfileData()
+  const [fullName, setFullName] = useState('')
   const [result, setResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  // Sync form when profile data arrives
+  useEffect(() => {
+    const name = profile?.fullName ?? user?.fullName ?? ''
+    setFullName(name)
+  }, [profile?.fullName, user?.fullName])
+
+  const currentEmail = profile?.email ?? user?.email ?? ''
 
   const mutation = useMutation({
     mutationFn: () => api.put('/account/profile', { fullName }),
@@ -71,6 +102,14 @@ function ProfileTab() {
       setResult({ message: err?.response?.data?.message ?? 'Une erreur est survenue', type: 'error' })
     },
   })
+
+  if (isLoading && !profile && !user?.email) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <div className="w-6 h-6 rounded-full border-2 border-emi-violet border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <form
@@ -100,7 +139,7 @@ function ProfileTab() {
         </label>
         <input
           type="email"
-          value={user?.email ?? ''}
+          value={currentEmail}
           disabled
           className="w-full px-3 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-700/40 text-sm text-zinc-400 cursor-not-allowed"
         />
@@ -185,6 +224,8 @@ function PasswordTab() {
 
 function EmailTab() {
   const { user, setUser } = useAuthStore()
+  const { data: profile } = useProfileData()
+  const currentEmail = profile?.email ?? user?.email ?? ''
   const [step, setStep] = useState<'request' | 'verify'>('request')
   const [newEmail, setNewEmail] = useState('')
   const [otp, setOtp] = useState('')
@@ -221,7 +262,7 @@ function EmailTab() {
     <div className="space-y-5">
       <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/40 text-sm">
         <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Email actuel</p>
-        <p className="font-medium text-zinc-900 dark:text-zinc-100">{user?.email}</p>
+        <p className="font-medium text-zinc-900 dark:text-zinc-100">{currentEmail || '—'}</p>
       </div>
 
       {step === 'request' ? (
