@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { useAppStore } from '../stores'
 import api from '../services/api'
-import type { Sale } from '../types'
+import type { Sale, PaginatedResponse } from '../types'
 
 function fmt(n: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n)
@@ -32,12 +32,13 @@ export function UnpaidBillsPage() {
   const [payDate, setPayDate] = useState('')
   const [payNotes, setPayNotes] = useState('')
 
-  const { data: sales, isLoading } = useQuery<Sale[]>({
+  const { data: salesPage, isLoading } = useQuery<PaginatedResponse<Sale>>({
     queryKey: ['sales', bid, 'unpaid'],
     queryFn: async () =>
-      (await api.get('/sales', { params: { business_id: bid, type: 'credit', status: 'pending' } })).data,
+      (await api.get('/sales', { params: { business_id: bid, type: 'credit', status: 'pending', per_page: 200 } })).data,
     enabled: !!bid,
   })
+  const sales = salesPage?.data
 
   const addPaymentMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => api.post('/sales/payments', payload),
