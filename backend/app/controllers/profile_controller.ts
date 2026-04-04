@@ -2,7 +2,6 @@ import UserTransformer from '#transformers/user_transformer'
 import BusinessUser from '#models/business_user'
 import User from '#models/user'
 import hash from '@adonisjs/core/services/hash'
-import mail from '@adonisjs/mail/services/main'
 import vine from '@vinejs/vine'
 import { DateTime } from 'luxon'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -80,6 +79,7 @@ export default class ProfileController {
     user.emailOtpExpiresAt = DateTime.now().plus({ minutes: 15 })
     await user.save()
 
+    const { default: mail } = await import('@adonisjs/mail/services/main')
     await mail.send((message) => {
       message
         .to(data.newEmail)
