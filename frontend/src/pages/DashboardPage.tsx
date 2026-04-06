@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -151,13 +151,6 @@ export function DashboardPage() {
   const unpaidSales = unpaidPage?.data ?? []
   const unpaidTotal = unpaidSales.reduce((s, sale) => s + (Number(sale.totalAmount) - Number(sale.paidAmount)), 0)
 
-  const closeMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/rotations/${id}/close`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rotations', businessId] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard', businessId] })
-    },
-  })
 
   const chartData = useMemo(() => buildChartData(data?.recentTransactions ?? []), [data])
   const gridColor = isDark ? '#27272a' : '#e4e4e7'
@@ -269,22 +262,12 @@ export function DashboardPage() {
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Rotation en cours</p>
               <Badge variant="success">{activeRotation.name}</Badge>
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                to={`/rotations/${activeRotation.id}`}
-                className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
-              >
-                Explorer <Icon name="chevron-right" size={12} />
-              </Link>
-              <Button
-                size="sm"
-                variant="secondary"
-                loading={closeMutation.isPending}
-                onClick={() => { if (window.confirm('Clôturer cette rotation ?')) closeMutation.mutate(activeRotation.id) }}
-              >
-                Clôturer
-              </Button>
-            </div>
+            <Link
+              to={`/rotations/${activeRotation.id}`}
+              className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            >
+              Explorer <Icon name="chevron-right" size={12} />
+            </Link>
           </div>
 
           {/* Stats */}
