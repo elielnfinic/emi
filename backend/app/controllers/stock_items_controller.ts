@@ -1,4 +1,6 @@
 import StockItem from '#models/stock_item'
+import StockMovement from '#models/stock_movement'
+import Transaction from '#models/transaction'
 import { createStockItemValidator, updateStockItemValidator } from '#validators/stock_item'
 import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -54,6 +56,25 @@ export default class StockItemsController {
   async destroy(ctx: HttpContext) {
     const item = await StockItem.findOrFail(ctx.params.id)
     await verifyBusinessAccess(ctx, item.businessId, ['admin', 'manager'])
+
+    // Delete expense transactions linked to stock-in movements for this product.
+    // The DB cascades the deletion of StockMovement records when the item is
+    // deleted, so we must clean up the linked Transaction records beforehand —
+    // otherwise they remain as orphaned expense entries in the transaction list.
+    const inMovements = await StockMovement.query()
+      .where('stockItemId', item.id)
+      .where('type', 'in')
+      .select('id')
+
+    if (inMovements.length > 0) {
+      const descriptions = inMovements.map((m) => `stock_movement:${m.id}`)
+      await Transaction.query()
+        .where('businessId', item.businessId)
+        .whereIn('description', descriptions)
+        .delete()
+    }
+
+    // Deleting the item cascades to its StockMovement records in the DB
     await item.delete()
     return { message: 'Stock item deleted successfully' }
   }
