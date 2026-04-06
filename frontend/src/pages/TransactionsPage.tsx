@@ -182,8 +182,8 @@ export function TransactionsPage() {
   const queryClient = useQueryClient()
 
   const [showModal, setShowModal] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
   const [successType, setSuccessType] = useState<'income' | 'expense'>('income')
+  const [inModalSuccess, setInModalSuccess] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
 
   const [type, setType] = useState('income')
@@ -225,11 +225,13 @@ export function TransactionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', bid] })
       queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
-      setSuccessType(type as 'income' | 'expense')
-      resetForm()
-      setShowModal(false)
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 4000)
+      const saved = type as 'income' | 'expense'
+      setSuccessType(saved)
+      // Reset only amount / description / beneficiary — keep date and type for next entry
+      setAmount(''); setDescription(''); setBeneficiary('')
+      // Show inline banner inside the modal
+      setInModalSuccess(true)
+      setTimeout(() => setInModalSuccess(false), 3000)
     },
   })
 
@@ -244,6 +246,7 @@ export function TransactionsPage() {
   const resetForm = () => {
     setType('income'); setAmount(''); setDescription(''); setBeneficiary('')
     setDate(new Date().toISOString().split('T')[0])
+    setInModalSuccess(false)
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -313,18 +316,6 @@ export function TransactionsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Success toast */}
-      {showSuccess && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 text-white px-6 py-4 rounded-2xl shadow-2xl animate-fade-in ${successType === 'income' ? 'bg-emerald-500' : 'bg-red-500'}`}>
-          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-          </div>
-          <div>
-            <p className="font-semibold text-sm">{successType === 'income' ? 'Entrée enregistrée !' : 'Dépense enregistrée !'}</p>
-            <p className="text-xs text-white/80 mt-0.5">La transaction a bien été sauvegardée.</p>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div>
@@ -504,10 +495,19 @@ export function TransactionsPage() {
       {/* Create Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); resetForm() }}
         title={type === 'income' ? '💰 Entrée d\'argent' : '💸 Enregistrer une dépense'}
       >
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* ── Success banner ── */}
+          {inModalSuccess && (
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in ${successType === 'income' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'}`}>
+              <div className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${successType === 'income' ? 'bg-emerald-500' : 'bg-red-500'} text-white`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              </div>
+              <span>{successType === 'income' ? 'Entrée enregistrée avec succès !' : 'Dépense enregistrée avec succès !'}</span>
+            </div>
+          )}
           {/* Type toggle */}
           <div className="flex gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
             <button
