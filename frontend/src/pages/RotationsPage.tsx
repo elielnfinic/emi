@@ -7,6 +7,7 @@ import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { Modal } from '../components/ui/Modal'
+import { CloseRotationModal } from '../components/ui/CloseRotationModal'
 import { StatCard } from '../components/ui/Card'
 import { useAppStore } from '../stores'
 import api from '../services/api'
@@ -29,6 +30,7 @@ export function RotationsPage() {
   const queryClient = useQueryClient()
 
   const [showModal, setShowModal] = useState(false)
+  const [closeTarget, setCloseTarget] = useState<Rotation | null>(null)
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
   const [initialCapital, setInitialCapital] = useState('')
@@ -57,7 +59,10 @@ export function RotationsPage() {
 
   const closeMutation = useMutation({
     mutationFn: (id: number) => api.post(`/rotations/${id}/close`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rotations', bid] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rotations', bid] })
+      setCloseTarget(null)
+    },
   })
 
   const resetForm = (nextNumber?: number) => {
@@ -156,7 +161,7 @@ export function RotationsPage() {
                   </Link>
                   <button
                     className="px-3 py-2 rounded-xl text-sm font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                    onClick={() => { if (window.confirm('Clôturer cette rotation ?')) closeMutation.mutate(r.id) }}
+                    onClick={() => setCloseTarget(r)}
                   >
                     Clôturer
                   </button>
@@ -218,6 +223,16 @@ export function RotationsPage() {
           </button>
         </div>
       )}
+
+      {/* Close Rotation Modal */}
+      <CloseRotationModal
+        isOpen={!!closeTarget}
+        onClose={() => setCloseTarget(null)}
+        onConfirm={() => closeTarget && closeMutation.mutate(closeTarget.id)}
+        loading={closeMutation.isPending}
+        rotationName={closeTarget?.name ?? ''}
+        currency={cur}
+      />
 
       {/* Create Modal */}
       <Modal isOpen={showModal} onClose={() => { setShowModal(false); setFormError('') }} title="Nouvelle rotation">

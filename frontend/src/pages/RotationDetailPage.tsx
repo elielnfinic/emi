@@ -5,6 +5,7 @@ import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { Button } from '../components/ui/Button'
+import { CloseRotationModal } from '../components/ui/CloseRotationModal'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { RotationDetail } from '../types'
@@ -32,6 +33,7 @@ export function RotationDetailPage() {
   const cur = currentBusiness?.currency || 'USD'
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('transactions')
+  const [showCloseModal, setShowCloseModal] = useState(false)
 
   const { data: rotation, isLoading } = useQuery<RotationDetail>({
     queryKey: ['rotation', id],
@@ -44,6 +46,7 @@ export function RotationDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rotation', id] })
       queryClient.invalidateQueries({ queryKey: ['rotations'] })
+      setShowCloseModal(false)
     },
   })
 
@@ -115,8 +118,7 @@ export function RotationDetailPage() {
             <Button
               size="sm"
               variant="secondary"
-              loading={closeMutation.isPending}
-              onClick={() => { if (window.confirm('Clôturer cette rotation ? Cette action est irréversible.')) closeMutation.mutate() }}
+              onClick={() => setShowCloseModal(true)}
             >
               Clôturer la rotation
             </Button>
@@ -185,6 +187,17 @@ export function RotationDetailPage() {
           </p>
         </div>
       </div>
+
+      {/* Close Rotation Modal */}
+      <CloseRotationModal
+        isOpen={showCloseModal}
+        onClose={() => setShowCloseModal(false)}
+        onConfirm={() => closeMutation.mutate()}
+        loading={closeMutation.isPending}
+        rotationName={rotation.name}
+        currency={cur}
+        financials={{ totalRevenue, totalExpenses, profit }}
+      />
 
       {/* Tabs */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
