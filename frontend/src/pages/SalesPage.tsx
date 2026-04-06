@@ -88,6 +88,7 @@ function CustomerCombobox({
             onChange={(e) => { setQ(e.target.value); setLabel(''); onChange('', ''); setOpen(true) }}
             onFocus={() => setOpen(true)}
             placeholder="Rechercher un client…"
+            data-sale-customer-input
             className="w-full px-3 py-2.5 pr-8 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all"
           />
           {value && (
@@ -177,7 +178,7 @@ function CustomerCombobox({
 
 /* ─── Product Search ───────────────────────────────────────────────────── */
 function ProductSearch({
-  bid, cur, stockItems, onAdd,
+  bid: _bid, cur, stockItems, onAdd,
 }: {
   bid: number; cur: string; stockItems: StockItem[]; onAdd: (item: StockItem) => void
 }) {
@@ -396,7 +397,7 @@ export function SalesPage() {
   // Form state
   const [type, setType] = useState<'cash' | 'credit'>('cash')
   const [customerId, setCustomerId] = useState('')
-  const [customerName, setCustomerName] = useState('')
+  const [_customerName, setCustomerName] = useState('')
   const [date, setDate] = useState(today)
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<CartItem[]>([])
@@ -404,18 +405,32 @@ export function SalesPage() {
   const [formSuccess, setFormSuccess] = useState(false)
   // Manual item
   const [showManual, setShowManual] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const [manualName, setManualName] = useState('')
   const [manualPrice, setManualPrice] = useState('')
   const [manualQty, setManualQty] = useState('1')
 
   // History state
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
-  const [historyOpen, setHistoryOpen] = useState(true)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? '1')
   const [inputValue, setInputValue] = useState(search)
   useEffect(() => setInputValue(search), [search])
+
+  // Auto-focus form when navigated from dashboard quick action
+  useEffect(() => {
+    if (searchParams.get('action') === 'new-sale') {
+      setHistoryOpen(false)
+      setSearchParams(prev => { const n = new URLSearchParams(prev); n.delete('action'); return n }, { replace: true })
+      // Focus the customer search field after the DOM settles
+      setTimeout(() => {
+        const input = document.querySelector<HTMLInputElement>('[data-sale-customer-input]')
+        input?.focus()
+      }, 150)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Payment panel
   const [paymentPanelId, setPaymentPanelId] = useState<number | null>(null)
@@ -553,81 +568,128 @@ export function SalesPage() {
         </div>
       </div>
 
-      <div className={`grid gap-5 ${historyOpen ? 'grid-cols-1 lg:grid-cols-5' : 'grid-cols-1 max-w-xl'}`}>
-        {/* ── POS Terminal ──────────────────────────────────────────────── */}
-        <div className={historyOpen ? 'lg:col-span-2' : ''}>
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-            {/* Terminal header */}
-            <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                  Nouvelle vente
-                </h2>
-                <button type="button" onClick={resetForm} className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
-                  Vider
-                </button>
+      {/* ── POS Terminal (full width, 2-col inside on lg) ── */}
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        {/* Terminal header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-100 dark:border-zinc-800">
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Nouvelle vente
+          </h2>
+          <button type="button" onClick={resetForm} className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+            Vider
+          </button>
+        </div>
+
+        {/* 2-column body on lg */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-zinc-100 dark:divide-zinc-800">
+          {/* LEFT: inputs */}
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+
+            {/* ── Étape 1 : Type de paiement ── */}
+            <div className="p-5 space-y-2">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
+                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Type de paiement</p>
               </div>
-              {/* Cash / Crédit toggle */}
-              <div className="flex gap-1.5 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-                {(['cash', 'credit'] as const).map((t) => (
-                  <button
-                    key={t} type="button"
-                    onClick={() => { setType(t); if (t === 'cash') { setCustomerId(''); setCustomerName('') } }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      type === t
-                        ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
-                        : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    }`}
-                  >
-                    {t === 'cash' ? '💵' : '🤝'} {t === 'cash' ? 'Comptant' : 'Crédit'}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => { setType('cash'); setCustomerId(''); setCustomerName('') }}
+                className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl border-2 text-left transition-all duration-150 active:scale-[.98] ${
+                  type === 'cash'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                    : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                }`}
+              >
+                <span className="text-base shrink-0">💵</span>
+                <span className={`flex-1 text-sm font-semibold ${type === 'cash' ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                  Le client paye cash
+                </span>
+                <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                  type === 'cash' ? 'border-emerald-500 bg-emerald-500' : 'border-zinc-300 dark:border-zinc-600'
+                }`}>
+                  {type === 'cash' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('credit')}
+                className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl border-2 text-left transition-all duration-150 active:scale-[.98] ${
+                  type === 'credit'
+                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                    : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                }`}
+              >
+                <span className="text-base shrink-0">🤝</span>
+                <span className={`flex-1 text-sm font-semibold ${type === 'credit' ? 'text-amber-700 dark:text-amber-400' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                  Le client prend une dette
+                </span>
+                <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                  type === 'credit' ? 'border-amber-500 bg-amber-500' : 'border-zinc-300 dark:border-zinc-600'
+                }`}>
+                  {type === 'credit' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+              </button>
             </div>
 
-            <div className="p-4 space-y-4">
-              {/* Customer */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5">
-                  Client {type === 'credit' && <span className="text-red-500">*</span>}
-                  {type === 'cash' && <span className="text-zinc-400 normal-case font-normal"> · optionnel</span>}
-                </label>
-                <CustomerCombobox bid={bid} value={customerId} onChange={(id, name) => { setCustomerId(id); setCustomerName(name) }} required={type === 'credit'} />
+            {/* ── Étape 2 : Client ── */}
+            <div className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
+                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  Client
+                  {type === 'credit' && <span className="text-red-500 ml-1">*</span>}
+                  {type === 'cash' && <span className="text-zinc-400 normal-case font-normal ml-1">· optionnel</span>}
+                </p>
               </div>
+              <CustomerCombobox bid={bid} value={customerId} onChange={(id, name) => { setCustomerId(id); setCustomerName(name) }} required={type === 'credit'} />
+            </div>
 
-              {/* Date */}
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-                <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optionnel" />
+            {/* ── Étape 3 : Produits ── */}
+            <div className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-5 h-5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-black flex items-center justify-center shrink-0">3</span>
+                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Produits</p>
               </div>
-
-              {/* Products */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5">Produits</label>
-                <ProductSearch bid={bid} cur={cur} stockItems={stockItems} onAdd={addToCart} />
-              </div>
-
-              {/* Cart */}
-              {items.length > 0 ? (
-                <div className="space-y-2">
-                  {items.map((it, i) => (
-                    <CartRow key={i} item={it} index={i} cur={cur} onUpdate={updateItem} onRemove={removeItem} />
+              <ProductSearch bid={bid} cur={cur} stockItems={stockItems} onAdd={addToCart} />
+              {stockItems.filter(s => s.quantity > 0).slice(0, 5).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {stockItems.filter(s => s.quantity > 0).slice(0, 5).map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => addToCart(s)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-emi-violet hover:text-white text-zinc-600 dark:text-zinc-300 text-xs font-medium transition-all active:scale-95"
+                    >
+                      <span>+</span> {s.name}
+                      <span className="opacity-50 text-[10px]">{s.quantity}</span>
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <div className="border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-xl py-6 text-center">
-                  <p className="text-xs text-zinc-400">Le panier est vide — ajoutez des produits ci-dessus</p>
+              )}
+            </div>
+
+            {/* ── Autres détails + article libre + erreurs ── */}
+            <div className="p-5 space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowDetails(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                  className={`transition-transform duration-200 ${showDetails ? 'rotate-0' : '-rotate-90'}`}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+                Autres détails
+              </button>
+              {showDetails && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                  <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optionnel" />
                 </div>
               )}
-
-              {/* Manual item */}
               {!showManual ? (
-                <button
-                  type="button"
-                  onClick={() => setShowManual(true)}
-                  className="text-xs text-zinc-400 hover:text-emi-violet transition-colors flex items-center gap-1"
-                >
+                <button type="button" onClick={() => setShowManual(true)} className="text-xs text-zinc-400 hover:text-emi-violet transition-colors flex items-center gap-1">
                   <Icon name="plus" size={12} /> Ajouter un article libre
                 </button>
               ) : (
@@ -647,8 +709,6 @@ export function SalesPage() {
                   </div>
                 </div>
               )}
-
-              {/* Errors / Success */}
               {formError && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 rounded-xl text-sm text-red-600 dark:text-red-400">
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
@@ -662,190 +722,197 @@ export function SalesPage() {
                 </div>
               )}
             </div>
-
-            {/* Total + Submit — sticky footer */}
-            <div className="px-4 pb-4 pt-0">
-              <div className={`rounded-2xl p-4 ${items.length > 0 ? 'bg-gradient-to-r from-emi-violet to-violet-500' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-sm font-medium ${items.length > 0 ? 'text-violet-100' : 'text-zinc-500'}`}>
-                    {items.length} article{items.length > 1 ? 's' : ''}
-                  </span>
-                  <span className={`text-2xl font-black ${items.length > 0 ? 'text-white' : 'text-zinc-400'}`}>
-                    {fmt(total, cur)}
-                  </span>
-                </div>
-                <button
-                  type="submit"
-                  disabled={items.length === 0 || createMutation.isPending || (type === 'credit' && !customerId)}
-                  className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed ${
-                    items.length > 0
-                      ? 'bg-white text-emi-violet hover:bg-violet-50 shadow-lg shadow-violet-900/20'
-                      : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'
-                  }`}
-                >
-                  {createMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-emi-violet/30 border-t-emi-violet rounded-full animate-spin" />
-                      Enregistrement…
-                    </span>
-                  ) : `Valider la vente · ${fmt(total, cur)}`}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* ── Sales History ─────────────────────────────────────────────── */}
-        <div className={`${historyOpen ? 'lg:col-span-3' : ''} flex flex-col gap-4`}>
-          {/* History panel header */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <button
-              onClick={() => setHistoryOpen(v => !v)}
-              className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors group"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                className={`transition-transform ${historyOpen ? 'rotate-0' : '-rotate-90'}`}>
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-              Historique des ventes
-              {meta && <span className="text-xs font-normal text-zinc-400">({meta.total})</span>}
-            </button>
-            {historyOpen && (
-              <div className="flex items-center gap-2">
-                <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 gap-0.5">
-                  <button onClick={() => setViewMode('cards')}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-                    Cartes
-                  </button>
-                  <button onClick={() => setViewMode('table')}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
-                    Tableau
-                  </button>
-                </div>
-                <form onSubmit={applySearch} className="flex gap-1.5">
-                  <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                    <input
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Rechercher…"
-                      className="w-44 pl-8 pr-3 py-1.5 rounded-lg text-xs border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all"
-                    />
-                  </div>
-                  <Button type="submit" size="sm" variant="secondary">OK</Button>
-                </form>
-              </div>
-            )}
           </div>
 
-          {historyOpen && (
-            isLoading ? <Loader /> :
-            <>
-              {/* Cards view */}
-              {viewMode === 'cards' && (
-                <div className="space-y-3">
-                  {sales.length ? sales.map((s) => (
-                    <SaleCard
-                      key={s.id} s={s} cur={cur}
-                      paymentPanelId={paymentPanelId}
-                      openPaymentPanel={openPaymentPanel}
-                      closePaymentPanel={() => setPaymentPanelId(null)}
-                      addPaymentMutation={addPaymentMutation}
-                      payAmount={payAmount} setPayAmount={setPayAmount}
-                      payMethod={payMethod} setPayMethod={setPayMethod}
-                      payDate={payDate} setPayDate={setPayDate}
-                      payNotes={payNotes} setPayNotes={setPayNotes}
-                      onDelete={(id) => window.confirm('Supprimer cette vente ?') && deleteMutation.mutate(id)}
-                    />
-                  )) : (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 py-16 text-center">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-3">
-                        <Icon name="sales" size={22} />
-                      </div>
-                      <p className="text-sm text-zinc-400">{search ? 'Aucune vente ne correspond.' : 'Aucune vente pour le moment.'}</p>
-                    </div>
-                  )}
+          {/* RIGHT: cart + total + submit */}
+          <div className="p-5 flex flex-col gap-4">
+            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Panier</p>
+            {items.length > 0 ? (
+              <div className="space-y-2 flex-1">
+                {items.map((it, i) => (
+                  <CartRow key={i} item={it} index={i} cur={cur} onUpdate={updateItem} onRemove={removeItem} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-xl py-10 text-center flex items-center justify-center">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-2">
+                    <Icon name="sales" size={20} className="text-zinc-300 dark:text-zinc-600" />
+                  </div>
+                  <p className="text-xs text-zinc-400">Panier vide<br />Ajoutez des produits</p>
                 </div>
-              )}
+              </div>
+            )}
+            <div className={`rounded-2xl p-4 ${items.length > 0 ? 'bg-gradient-to-br from-emi-violet to-violet-500' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-sm font-medium ${items.length > 0 ? 'text-violet-100' : 'text-zinc-500'}`}>
+                  {items.length} article{items.length > 1 ? 's' : ''}
+                </span>
+                <span className={`text-3xl font-black ${items.length > 0 ? 'text-white' : 'text-zinc-400'}`}>
+                  {fmt(total, cur)}
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={items.length === 0 || createMutation.isPending || (type === 'credit' && !customerId)}
+                className={`w-full py-3.5 rounded-xl text-sm font-bold transition-all active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                  items.length > 0
+                    ? 'bg-white text-emi-violet hover:bg-violet-50 shadow-lg shadow-violet-900/20'
+                    : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'
+                }`}
+              >
+                {createMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-emi-violet/30 border-t-emi-violet rounded-full animate-spin" />
+                    Enregistrement…
+                  </span>
+                ) : `Valider la vente · ${fmt(total, cur)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
 
-              {/* Table view */}
-              {viewMode === 'table' && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
-                        <tr>
-                          {['Référence','Type','Client','Total','Statut','Date',''].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
-                        {sales.length ? sales.map((s) => {
-                          const actualPaid = s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount)
-                          const remaining = Number(s.totalAmount) - actualPaid
-                          const isPending = s.type === 'credit' && s.status !== 'completed'
-                          const isOpen = paymentPanelId === s.id
-                          return (
-                            <Fragment key={s.id}>
-                              <tr className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                                <td className="px-4 py-3 font-medium text-zinc-800 dark:text-zinc-200">{s.reference}</td>
-                                <td className="px-4 py-3"><Badge variant={s.type === 'cash' ? 'success' : 'info'} dot>{s.type}</Badge></td>
-                                <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{s.customer?.name || 'Passage'}</td>
-                                <td className="px-4 py-3">
-                                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{fmt(Number(s.totalAmount), cur)}</span>
-                                  {isPending && <p className="text-xs text-red-500">{fmt(remaining, cur)} restant</p>}
-                                </td>
-                                <td className="px-4 py-3"><Badge variant={s.status === 'completed' ? 'success' : 'warning'} dot>{s.status}</Badge></td>
-                                <td className="px-4 py-3 text-zinc-400 text-xs">{String(s.date).slice(0, 10)}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-1.5 justify-end">
-                                    {isPending && (
-                                      <Button size="sm" variant={isOpen ? 'outline' : 'primary'} onClick={() => isOpen ? setPaymentPanelId(null) : openPaymentPanel(s)}>
-                                        {isOpen ? 'Fermer' : 'Payer'}
-                                      </Button>
-                                    )}
-                                    <Button size="sm" variant="ghost" className="text-red-500" onClick={() => window.confirm('Supprimer ?') && deleteMutation.mutate(s.id)}>×</Button>
+      {/* ── Sales History (collapsible card) ── */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-zinc-100 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(v => !v)}
+            className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+              className={`transition-transform duration-200 ${historyOpen ? 'rotate-0' : '-rotate-90'}`}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            Historique des ventes
+            {meta && <span className="text-xs font-normal text-zinc-400 ml-0.5">· {meta.total}</span>}
+          </button>
+          {historyOpen && (
+            <div className="flex items-center gap-2">
+              <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 gap-0.5">
+                <button onClick={() => setViewMode('cards')}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                  Cartes
+                </button>
+                <button onClick={() => setViewMode('table')}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}>
+                  Tableau
+                </button>
+              </div>
+              <form onSubmit={applySearch} className="flex gap-1.5">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Rechercher…"
+                    className="w-44 pl-8 pr-3 py-1.5 rounded-lg text-xs border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all" />
+                </div>
+                <Button type="submit" size="sm" variant="secondary">OK</Button>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {historyOpen && (
+          isLoading ? <div className="p-8"><Loader /></div> :
+          <div className="p-5 space-y-3">
+            {viewMode === 'cards' && (
+              <>
+                {sales.length ? sales.map((s) => (
+                  <SaleCard
+                    key={s.id} s={s} cur={cur}
+                    paymentPanelId={paymentPanelId}
+                    openPaymentPanel={openPaymentPanel}
+                    closePaymentPanel={() => setPaymentPanelId(null)}
+                    addPaymentMutation={addPaymentMutation}
+                    payAmount={payAmount} setPayAmount={setPayAmount}
+                    payMethod={payMethod} setPayMethod={setPayMethod}
+                    payDate={payDate} setPayDate={setPayDate}
+                    payNotes={payNotes} setPayNotes={setPayNotes}
+                    onDelete={(id) => window.confirm('Supprimer cette vente ?') && deleteMutation.mutate(id)}
+                  />
+                )) : (
+                  <div className="rounded-2xl border border-zinc-100 dark:border-zinc-800 py-16 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-3">
+                      <Icon name="sales" size={22} />
+                    </div>
+                    <p className="text-sm text-zinc-400">{search ? 'Aucune vente ne correspond.' : 'Aucune vente pour le moment.'}</p>
+                  </div>
+                )}
+                {meta && meta.lastPage > 1 && (
+                  <Pagination meta={meta} onPageChange={(p) => setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })} />
+                )}
+              </>
+            )}
+            {viewMode === 'table' && (
+              <div className="overflow-hidden rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
+                      <tr>
+                        {['Référence','Type','Client','Total','Statut','Date',''].map(h => (
+                          <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
+                      {sales.length ? sales.map((s) => {
+                        const actualPaid = s.payments?.reduce((sum, p) => sum + Number(p.amount), 0) ?? Number(s.paidAmount)
+                        const remaining = Number(s.totalAmount) - actualPaid
+                        const isPending = s.type === 'credit' && s.status !== 'completed'
+                        const isOpen = paymentPanelId === s.id
+                        return (
+                          <Fragment key={s.id}>
+                            <tr className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                              <td className="px-4 py-3 font-medium text-zinc-800 dark:text-zinc-200">{s.reference}</td>
+                              <td className="px-4 py-3"><Badge variant={s.type === 'cash' ? 'success' : 'info'} dot>{s.type}</Badge></td>
+                              <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{s.customer?.name || 'Passage'}</td>
+                              <td className="px-4 py-3">
+                                <span className="font-semibold text-zinc-800 dark:text-zinc-200">{fmt(Number(s.totalAmount), cur)}</span>
+                                {isPending && <p className="text-xs text-red-500">{fmt(remaining, cur)} restant</p>}
+                              </td>
+                              <td className="px-4 py-3"><Badge variant={s.status === 'completed' ? 'success' : 'warning'} dot>{s.status}</Badge></td>
+                              <td className="px-4 py-3 text-zinc-400 text-xs">{String(s.date).slice(0, 10)}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  {isPending && (
+                                    <Button size="sm" variant={isOpen ? 'outline' : 'primary'} onClick={() => isOpen ? setPaymentPanelId(null) : openPaymentPanel(s)}>
+                                      {isOpen ? 'Fermer' : 'Payer'}
+                                    </Button>
+                                  )}
+                                  <Button size="sm" variant="ghost" className="text-red-500" onClick={() => window.confirm('Supprimer ?') && deleteMutation.mutate(s.id)}>×</Button>
+                                </div>
+                              </td>
+                            </tr>
+                            {isOpen && (
+                              <tr className="bg-violet-50/30 dark:bg-violet-950/10">
+                                <td colSpan={7} className="px-4 py-3">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                                    <Input type="number" step="0.01" placeholder="Montant" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+                                    <Select value={payMethod} onChange={e => setPayMethod(e.target.value)} options={[{value:'cash',label:'Cash'},{value:'transfer',label:'Virement'},{value:'mobile_money',label:'Mobile Money'}]} />
+                                    <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
+                                    <Button loading={addPaymentMutation.isPending} disabled={!payAmount || Number(payAmount) <= 0}
+                                      onClick={() => addPaymentMutation.mutate({ saleId: s.id, amount: Number(payAmount), paymentMethod: payMethod, date: payDate, notes: payNotes || undefined })}>
+                                      Enregistrer
+                                    </Button>
                                   </div>
                                 </td>
                               </tr>
-                              {isOpen && (
-                                <tr className="bg-violet-50/30 dark:bg-violet-950/10">
-                                  <td colSpan={7} className="px-4 py-3">
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
-                                      <Input type="number" step="0.01" placeholder="Montant" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
-                                      <Select value={payMethod} onChange={e => setPayMethod(e.target.value)} options={[{value:'cash',label:'Cash'},{value:'transfer',label:'Virement'},{value:'mobile_money',label:'Mobile Money'}]} />
-                                      <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
-                                      <Button loading={addPaymentMutation.isPending} disabled={!payAmount || Number(payAmount) <= 0}
-                                        onClick={() => addPaymentMutation.mutate({ saleId: s.id, amount: Number(payAmount), paymentMethod: payMethod, date: payDate, notes: payNotes || undefined })}>
-                                        Enregistrer
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </Fragment>
-                          )
-                        }) : (
-                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-zinc-400">
-                            {search ? 'Aucune vente ne correspond.' : 'Aucune vente pour le moment.'}
-                          </td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  {meta && <Pagination meta={meta} onPageChange={(p) => setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })} />}
+                            )}
+                          </Fragment>
+                        )
+                      }) : (
+                        <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-zinc-400">
+                          {search ? 'Aucune vente ne correspond.' : 'Aucune vente pour le moment.'}
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-
-              {viewMode === 'cards' && meta && meta.lastPage > 1 && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                  <Pagination meta={meta} onPageChange={(p) => setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })} />
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                {meta && <Pagination meta={meta} onPageChange={(p) => setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })} />}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

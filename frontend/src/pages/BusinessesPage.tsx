@@ -7,34 +7,29 @@ import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import api from '../services/api'
-import type { Business, Organization } from '../types'
+import type { Business } from '../types'
+
+const CURRENCIES = [
+  { value: 'USD', label: 'USD — Dollar américain' },
+  { value: 'EUR', label: 'EUR — Euro' },
+  { value: 'CDF', label: 'CDF — Franc congolais' },
+  { value: 'XAF', label: 'XAF — Franc CFA' },
+  { value: 'GBP', label: 'GBP — Livre sterling' },
+]
 
 export function BusinessesPage() {
-  const [name, setName] = useState('')
-  const [type, setType] = useState('standard')
-  const [currency, setCurrency] = useState('USD')
-  const [address, setAddress] = useState('')
-  const [phone, setPhone] = useState('')
   const queryClient = useQueryClient()
 
-  const { data: orgs } = useQuery<Organization[]>({
-    queryKey: ['organizations'],
-    queryFn: async () => (await api.get('/organizations')).data,
-  })
-
-  const orgId = orgs?.[0]?.id
+  const [name, setName]         = useState('')
+  const [type, setType]         = useState('standard')
+  const [currency, setCurrency] = useState('USD')
+  const [address, setAddress]   = useState('')
+  const [phone, setPhone]       = useState('')
+  const [error, setError]       = useState('')
 
   const { data: businesses, isLoading } = useQuery<Business[]>({
-    queryKey: ['businesses', orgId],
-    queryFn: async () => (await api.get('/businesses', { params: { organization_id: orgId } })).data,
-    enabled: !!orgId,
-  })
-
-  const createOrgMutation = useMutation({
-    mutationFn: (data: { name: string }) => api.post('/organizations', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] })
-    },
+    queryKey: ['businesses'],
+    queryFn: async () => (await api.get('/businesses')).data,
   })
 
   const createMutation = useMutation({
@@ -42,6 +37,11 @@ export function BusinessesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['businesses'] })
       resetForm()
+      setError('')
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { error?: string; errors?: { message: string }[] } } }
+      setError(e.response?.data?.error || e.response?.data?.errors?.[0]?.message || 'Échec de la création.')
     },
   })
 
@@ -51,58 +51,45 @@ export function BusinessesPage() {
   })
 
   const resetForm = () => {
-    setName('')
-    setType('standard')
-    setCurrency('USD')
-    setAddress('')
-    setPhone('')
+    setName(''); setType('standard'); setCurrency('USD'); setAddress(''); setPhone('')
   }
 
-  const [error, setError] = useState('')
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     setError('')
-    try {
-      let resolvedOrgId = orgId
-      if (!resolvedOrgId) {
-        const res = await createOrgMutation.mutateAsync({ name })
-        resolvedOrgId = (res.data as Organization).id
-      }
-      createMutation.mutate({
-        organizationId: resolvedOrgId,
-        name,
-        type,
-        currency,
-        address: address || undefined,
-        phone: phone || undefined,
-      })
-    } catch {
-      setError('Failed to create business. Please try again.')
-    }
+    createMutation.mutate({
+      name,
+      type,
+      supportsRotations: type === 'rotation',
+      currency,
+      address: address || undefined,
+      phone: phone || undefined,
+    })
   }
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this business?')) {
-      deleteMutation.mutate(id)
-    }
-  }
-
-  if (isLoading && orgId) return <Loader />
+  if (isLoading) return <Loader />
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Businesses</h1>
+      <div>
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Businesses</h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+          {businesses?.length ?? 0} business{(businesses?.length ?? 0) !== 1 ? 'es' : ''}
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Create form */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Business</h3>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Nouveau business</h3>
             <form onSubmit={handleSubmit} className="space-y-3">
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </div>
               )}
-              <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="My Business" />
+              <Input label="Nom *" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Mon Business" />
               <Select
                 label="Type"
                 value={type}
@@ -113,63 +100,67 @@ export function BusinessesPage() {
                 ]}
               />
               <Select
-                label="Currency"
+                label="Devise"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                options={[
-                  { value: 'USD', label: 'USD' },
-                  { value: 'EUR', label: 'EUR' },
-                  { value: 'CDF', label: 'CDF' },
-                ]}
+                options={CURRENCIES}
               />
-              <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" />
-              <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 234 567 890" />
-              <Button type="submit" className="w-full" loading={createMutation.isPending || createOrgMutation.isPending}>
-                Add Business
+              <Input label="Adresse" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Rue, Ville, Pays" />
+              <Input label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+XXX XX XX XX XX" />
+              <Button type="submit" className="w-full" loading={createMutation.isPending}>
+                Créer le business
               </Button>
             </form>
           </div>
         </div>
 
+        {/* List */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Currency</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {businesses?.length ? businesses.map((b) => (
-                    <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">{b.name}</td>
-                      <td className="px-6 py-4 text-gray-500 capitalize">{b.type}</td>
-                      <td className="px-6 py-4 text-gray-500">{b.currency}</td>
-                      <td className="px-6 py-4">
-                        <Badge variant={b.isActive ? 'success' : 'default'}>{b.isActive ? 'Active' : 'Inactive'}</Badge>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(b.id)}>Delete</Button>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-violet-light text-emi-violet mb-2">
-                          <Icon name="businesses" size={24} />
-                        </div>
-                        <p className="text-gray-500">No businesses yet. Create your first business.</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            {businesses?.length ? (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {businesses.map((b) => (
+                  <div key={b.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emi-violet to-emi-violet-dark flex items-center justify-center text-white text-xs font-bold shrink-0">
+                      {b.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{b.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs text-zinc-400 capitalize">{b.type}</span>
+                        <span className="text-xs text-zinc-400">·</span>
+                        <span className="text-xs text-zinc-400">{b.currency}</span>
+                        {b.supportsRotations && (
+                          <>
+                            <span className="text-xs text-zinc-400">·</span>
+                            <span className="text-xs text-emi-violet">Rotations</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant={b.isActive ? 'success' : 'default'} dot>
+                      {b.isActive ? 'Actif' : 'Inactif'}
+                    </Badge>
+                    <button
+                      onClick={() => { if (window.confirm(`Supprimer "${b.name}" ?`)) deleteMutation.mutate(b.id) }}
+                      className="shrink-0 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                      title="Supprimer"
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-16 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-4">
+                  <Icon name="businesses" size={26} />
+                </div>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Aucun business. Créez le premier.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

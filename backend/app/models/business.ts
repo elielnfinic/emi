@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo, hasMany } from '@adonisjs/lucid/orm'
-import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
-import Organization from '#models/organization'
+import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
+import type { HasMany } from '@adonisjs/lucid/types/relations'
 import BusinessUser from '#models/business_user'
 import Transaction from '#models/transaction'
 import StockItem from '#models/stock_item'
@@ -13,9 +12,6 @@ import Rotation from '#models/rotation'
 export default class Business extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
-
-  @column()
-  declare organizationId: number
 
   @column()
   declare name: string
@@ -46,9 +42,6 @@ export default class Business extends BaseModel {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
-
-  @belongsTo(() => Organization)
-  declare organization: BelongsTo<typeof Organization>
 
   @hasMany(() => BusinessUser)
   declare businessUsers: HasMany<typeof BusinessUser>

@@ -1,5 +1,6 @@
 import StockMovement from '#models/stock_movement'
 import StockItem from '#models/stock_item'
+import Transaction from '#models/transaction'
 import {
   createStockTransactionValidator,
   updateStockTransactionValidator,
@@ -26,6 +27,7 @@ export default class StockTransactionsController {
     const stockItemId = ctx.request.input('stock_item_id')
     const type = ctx.request.input('type')
     const rotationId = ctx.request.input('rotation_id')
+    const supplierId = ctx.request.input('supplier_id')
     const page = ctx.request.input('page', 1)
     const perPage = ctx.request.input('per_page', 20)
     await verifyBusinessAccess(ctx, businessId)
@@ -38,6 +40,7 @@ export default class StockTransactionsController {
     if (stockItemId) query.where('stockItemId', stockItemId)
     if (type) query.where('type', type)
     if (rotationId) query.where('rotationId', rotationId)
+    if (supplierId) query.where('supplierId', supplierId)
 
     return await query.orderBy('date', 'desc').orderBy('createdAt', 'desc').paginate(page, perPage)
   }
@@ -83,6 +86,28 @@ export default class StockTransactionsController {
     }
 
     await stockItem.save()
+
+    // Auto-create a linked expense transaction for stock-in with a unit price
+    if (data.type === 'in' && data.unitPrice != null) {
+      const movementDate = data.date ? DateTime.fromISO(data.date) : DateTime.now()
+      const lastTx = await Transaction.query()
+        .where('businessId', data.businessId)
+        .where('type', 'expense')
+        .orderBy('id', 'desc')
+        .first()
+      const txPrefix = 'SOR'
+      const txNextNum = lastTx ? Number.parseInt(lastTx.reference.split('-')[1] || '0') + 1 : 1
+      const txReference = `${txPrefix}-${String(txNextNum).padStart(4, '0')}`
+      await Transaction.create({
+        businessId: data.businessId,
+        userId: user.id,
+        reference: txReference,
+        type: 'expense',
+        amount: data.quantity * data.unitPrice,
+        description: `stock_movement:${movement.id}`,
+        date: movementDate,
+      })
+    }
 
     await movement.load('stockItem')
     await movement.load('user')
@@ -154,6 +179,15 @@ export default class StockTransactionsController {
       stockItem.quantity = Number(stockItem.quantity) - Number(movement.quantity)
     }
     await stockItem.save()
+
+    // Delete the auto-created linked expense transaction (if any)
+    if (movement.type === 'in') {
+      await Transaction.query()
+        .where('businessId', movement.businessId)
+        .where('description', `stock_movement:${movement.id}`)
+        .delete()
+    }
+
     await movement.delete()
     return { message: 'Stock transaction deleted successfully' }
   }

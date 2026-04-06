@@ -1,3 +1,12 @@
+export interface Organization {
+  id: number
+  name: string
+  slug: string
+  logoUrl: string | null
+  createdAt: string
+  updatedAt: string | null
+}
+
 export interface Role {
   id: number
   name: string
@@ -9,8 +18,8 @@ export interface User {
   id: number
   fullName: string | null
   email: string
+  phone?: string | null
   initials: string
-  organizationId: number | null
   roleId: number | null
   role?: string | null
   businessRoles?: Record<number, string>
@@ -18,18 +27,8 @@ export interface User {
   updatedAt: string | null
 }
 
-export interface Organization {
-  id: number
-  name: string
-  slug: string
-  logoUrl: string | null
-  createdAt: string
-  updatedAt: string | null
-}
-
 export interface Business {
   id: number
-  organizationId: number
   name: string
   slug: string
   type: string
@@ -38,7 +37,6 @@ export interface Business {
   address: string | null
   phone: string | null
   isActive: boolean
-  organization?: Organization
   createdAt: string
   updatedAt: string | null
 }

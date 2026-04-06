@@ -9,7 +9,6 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
-import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
@@ -22,159 +21,35 @@ function fmt(n: number, currency = 'USD') {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
 }
 
-// ── CSV Export ───────────────────────────────────────────────────────────────
-function exportCSV(items: StockItem[], currency: string) {
+function exportCSV(items: StockItem[], _currency: string) {
   const header = ['Nom', 'SKU', 'Catégorie', 'Unité', 'Qté', 'Qté min', 'Prix achat', 'Prix vente', 'Valeur stock']
   const rows = items.map(i => [
-    `"${i.name}"`,
-    i.sku || '',
-    i.category || '',
-    i.unit,
-    i.quantity,
-    i.minQuantity,
-    i.purchasePrice ?? '',
-    i.sellingPrice ?? '',
+    `"${i.name}"`, i.sku || '', i.category || '', i.unit,
+    i.quantity, i.minQuantity, i.purchasePrice ?? '', i.sellingPrice ?? '',
     ((i.sellingPrice || 0) * i.quantity).toFixed(2),
   ])
   const csv = [header, ...rows].map(r => r.join(',')).join('\n')
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = `inventaire-${new Date().toISOString().slice(0, 10)}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+  a.href = url; a.download = `inventaire-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
-// ── Stock-level bar for cards ────────────────────────────────────────────────
-function StockBar({ quantity, minQuantity }: { quantity: number; minQuantity: number }) {
-  const max = Math.max(minQuantity * 3, quantity, 1)
-  const pct = Math.min(100, Math.round((quantity / max) * 100))
-  const minPct = Math.min(100, Math.round((minQuantity / max) * 100))
-  const isLow = quantity <= minQuantity
-  const color = isLow ? '#EF4444' : quantity <= minQuantity * 1.5 ? '#F59E0B' : '#10B981'
-  return (
-    <div className="relative w-full bg-gray-100 dark:bg-zinc-700 rounded-full h-1.5 mt-1">
-      <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-      {minQuantity > 0 && (
-        <div className="absolute top-0 h-1.5 w-0.5 bg-gray-400 dark:bg-zinc-500" style={{ left: `${minPct}%` }} title={`Min: ${minQuantity}`} />
-      )}
-    </div>
-  )
-}
 
-// ── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({
-  item, cur, onStockIn, onEdit, onDelete,
-}: {
-  item: StockItem
-  cur: string
-  onStockIn: (item: StockItem) => void
-  onEdit: (item: StockItem) => void
-  onDelete: (id: number) => void
-}) {
-  const isLow = item.quantity <= item.minQuantity
-  const isOut = item.quantity === 0
-  return (
-    <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl border transition-all ${
-      isOut ? 'border-red-300 dark:border-red-800' :
-      isLow ? 'border-amber-300 dark:border-amber-800' :
-      'border-zinc-200 dark:border-zinc-800'
-    } shadow-sm hover:shadow-md p-4 flex flex-col gap-3`}>
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Link
-            to={`/stock/${item.id}`}
-            className="font-semibold text-zinc-900 dark:text-zinc-100 hover:text-emi-violet transition-colors text-sm leading-tight line-clamp-2"
-          >
-            {item.name}
-          </Link>
-          {item.sku && <p className="text-xs text-zinc-400 mt-0.5">{item.sku}</p>}
-        </div>
-        {isOut ? (
-          <Badge variant="danger">Rupture</Badge>
-        ) : isLow ? (
-          <Badge variant="warning">Bas</Badge>
-        ) : (
-          <Badge variant="success">OK</Badge>
-        )}
-      </div>
+const AVATAR_COLORS = [
+  'from-violet-500 to-purple-600',
+  'from-blue-500 to-indigo-600',
+  'from-amber-500 to-orange-600',
+  'from-cyan-500 to-sky-600',
+  'from-rose-500 to-pink-600',
+  'from-teal-500 to-emerald-600',
+]
+function avatarColor(id: number) { return AVATAR_COLORS[id % AVATAR_COLORS.length] }
+function getInitials(name: string) { return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) }
 
-      {/* Category */}
-      {item.category && (
-        <span className="inline-block self-start text-xs bg-violet-50 dark:bg-violet-950/30 text-emi-violet px-2 py-0.5 rounded-full font-medium">
-          {item.category}
-        </span>
-      )}
-
-      {/* Stock level */}
-      <div>
-        <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-          <span>Stock</span>
-          <span className={`font-bold text-sm ${isOut ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-zinc-800 dark:text-zinc-100'}`}>
-            {item.quantity} <span className="font-normal text-xs">{item.unit}</span>
-          </span>
-        </div>
-        <StockBar quantity={item.quantity} minQuantity={item.minQuantity} />
-        {item.minQuantity > 0 && (
-          <p className="text-xs text-zinc-400 mt-1">Min requis : {item.minQuantity} {item.unit}</p>
-        )}
-      </div>
-
-      {/* Prices */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2">
-          <p className="text-zinc-400 mb-0.5">Achat</p>
-          <p className="font-semibold text-zinc-700 dark:text-zinc-300">
-            {item.purchasePrice != null ? fmt(item.purchasePrice, cur) : '—'}
-          </p>
-        </div>
-        <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2">
-          <p className="text-zinc-400 mb-0.5">Vente</p>
-          <p className="font-semibold text-zinc-700 dark:text-zinc-300">
-            {item.sellingPrice != null ? fmt(item.sellingPrice, cur) : '—'}
-          </p>
-        </div>
-      </div>
-
-      {/* Value */}
-      {item.sellingPrice != null && (
-        <p className="text-xs text-zinc-400">
-          Valeur stock : <span className="font-semibold text-emi-violet">{fmt(item.sellingPrice * item.quantity, cur)}</span>
-        </p>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-        <button
-          onClick={() => onStockIn(item)}
-          className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green hover:bg-emi-green hover:text-white transition-colors"
-        >
-          <Icon name="plus" size={12} /> Entrée
-        </button>
-        <button
-          onClick={() => onEdit(item)}
-          className="p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-          title="Modifier"
-        >
-          <Icon name="edit" size={14} />
-        </button>
-        <button
-          onClick={() => onDelete(item.id)}
-          className="p-1.5 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 transition-colors"
-          title="Supprimer"
-        >
-          <Icon name="trash" size={14} />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Main Page ────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export function StockPage() {
   const { currentBusiness } = useAppStore()
   const { theme } = useThemeStore()
@@ -183,22 +58,31 @@ export function StockPage() {
   const cur = currentBusiness?.currency || 'USD'
   const queryClient = useQueryClient()
 
-  const [view, setView] = useState<'cards' | 'table'>('cards')
-  const [showChart, setShowChart] = useState(true)
   const [searchParams, setSearchParams] = useSearchParams()
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? '1')
   const categoryFilter = searchParams.get('category') ?? ''
   const [inputValue, setInputValue] = useState(search)
   const searchRef = useRef<HTMLInputElement>(null)
-
   useEffect(() => { setInputValue(search) }, [search])
+
+  // Auto-open stock-in modal when navigated from dashboard quick action
+  useEffect(() => {
+    if (searchParams.get('action') === 'stock-in') {
+      setSiProductId(''); setSiQuantity(''); setSiUnitPrice(''); setSiSupplierId('')
+      setSiRotationId(''); setSiNotes(''); setSiDate(new Date().toISOString().split('T')[0])
+      setStockInProductId(null)
+      setShowStockIn(true)
+      setSearchParams(prev => { const n = new URLSearchParams(prev); n.delete('action'); return n }, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Modals
   const [showNewProduct, setShowNewProduct] = useState(false)
   const [showStockIn, setShowStockIn] = useState(false)
   const [editProduct, setEditProduct] = useState<StockItem | null>(null)
   const [stockInProductId, setStockInProductId] = useState<number | null>(null)
+  const [showStats, setShowStats] = useState(false)
 
   // New Product form
   const [newName, setNewName] = useState('')
@@ -237,7 +121,6 @@ export function StockPage() {
     enabled: !!bid,
   })
 
-  // Fetch all items (for chart + export, no pagination limit)
   const { data: allData } = useQuery<PaginatedResponse<StockItem>>({
     queryKey: ['stock-items-all', bid],
     queryFn: async () =>
@@ -274,8 +157,7 @@ export function StockPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-items'] })
       queryClient.invalidateQueries({ queryKey: ['stock-items-all'] })
       queryClient.invalidateQueries({ queryKey: ['stock-categories'] })
-      setShowNewProduct(false)
-      resetNewProductForm()
+      setShowNewProduct(false); resetNewProductForm()
     },
   })
 
@@ -304,9 +186,7 @@ export function StockPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-items'] })
       queryClient.invalidateQueries({ queryKey: ['stock-items-all'] })
       queryClient.invalidateQueries({ queryKey: ['stock-transactions'] })
-      setShowStockIn(false)
-      setStockInProductId(null)
-      resetStockInForm()
+      setShowStockIn(false); setStockInProductId(null); resetStockInForm()
     },
   })
 
@@ -315,7 +195,6 @@ export function StockPage() {
     setNewName(''); setNewSku(''); setNewUnit(''); setNewCategory('')
     setNewSellingPrice(''); setNewPurchasePrice(''); setNewMinQty(''); setNewDescription('')
   }
-
   const resetStockInForm = () => {
     setSiProductId(''); setSiQuantity(''); setSiUnitPrice(''); setSiSupplierId('')
     setSiRotationId(''); setSiNotes(''); setSiDate(new Date().toISOString().split('T')[0])
@@ -323,14 +202,11 @@ export function StockPage() {
 
   const openEdit = (item: StockItem) => {
     setEditProduct(item)
-    setEditName(item.name)
-    setEditSku(item.sku || '')
-    setEditUnit(item.unit)
+    setEditName(item.name); setEditSku(item.sku || ''); setEditUnit(item.unit)
     setEditCategory(item.category || '')
     setEditSellingPrice(item.sellingPrice != null ? String(item.sellingPrice) : '')
     setEditPurchasePrice(item.purchasePrice != null ? String(item.purchasePrice) : '')
-    setEditMinQty(String(item.minQuantity))
-    setEditDescription(item.description || '')
+    setEditMinQty(String(item.minQuantity)); setEditDescription(item.description || '')
   }
 
   const openStockIn = (item: StockItem) => {
@@ -343,10 +219,8 @@ export function StockPage() {
   const handleCreateProduct = (e: FormEvent) => {
     e.preventDefault()
     createProductMutation.mutate({
-      businessId: bid,
-      name: newName,
-      sku: newSku || undefined,
-      unit: newUnit || 'piece',
+      businessId: bid, name: newName,
+      sku: newSku || undefined, unit: newUnit || 'piece',
       category: newCategory || undefined,
       sellingPrice: newSellingPrice ? Number(newSellingPrice) : undefined,
       purchasePrice: newPurchasePrice ? Number(newPurchasePrice) : undefined,
@@ -359,10 +233,8 @@ export function StockPage() {
     e.preventDefault()
     if (!editProduct) return
     updateProductMutation.mutate({
-      id: editProduct.id,
-      name: editName,
-      sku: editSku || null,
-      unit: editUnit,
+      id: editProduct.id, name: editName,
+      sku: editSku || null, unit: editUnit,
       category: editCategory || null,
       sellingPrice: editSellingPrice ? Number(editSellingPrice) : null,
       purchasePrice: editPurchasePrice ? Number(editPurchasePrice) : null,
@@ -376,15 +248,12 @@ export function StockPage() {
     const productId = stockInProductId || Number(siProductId)
     if (!productId) return
     stockInMutation.mutate({
-      businessId: bid,
-      stockItemId: productId,
-      type: 'in',
+      businessId: bid, stockItemId: productId, type: 'in',
       quantity: Number(siQuantity),
       unitPrice: siUnitPrice ? Number(siUnitPrice) : undefined,
       supplierId: siSupplierId ? Number(siSupplierId) : undefined,
       rotationId: siRotationId ? Number(siRotationId) : undefined,
-      notes: siNotes || undefined,
-      date: siDate || undefined,
+      notes: siNotes || undefined, date: siDate || undefined,
     })
   }
 
@@ -394,45 +263,28 @@ export function StockPage() {
 
   const applySearch = (e?: FormEvent) => {
     e?.preventDefault()
-    setSearchParams((prev) => {
+    setSearchParams(prev => {
       const next = new URLSearchParams(prev)
-      if (inputValue.trim()) next.set('search', inputValue.trim())
-      else next.delete('search')
-      next.set('page', '1')
-      return next
+      inputValue.trim() ? next.set('search', inputValue.trim()) : next.delete('search')
+      next.set('page', '1'); return next
     })
   }
-
   const clearSearch = () => {
     setInputValue('')
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.delete('search')
-      next.set('page', '1')
-      return next
-    })
+    setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('search'); next.set('page', '1'); return next })
     searchRef.current?.focus()
   }
-
   const applyCategory = (cat: string) => {
-    setSearchParams((prev) => {
+    setSearchParams(prev => {
       const next = new URLSearchParams(prev)
-      if (cat) next.set('category', cat)
-      else next.delete('category')
-      next.set('page', '1')
-      return next
+      cat ? next.set('category', cat) : next.delete('category')
+      next.set('page', '1'); return next
     })
   }
+  const handlePageChange = (p: number) =>
+    setSearchParams(prev => { const next = new URLSearchParams(prev); next.set('page', String(p)); return next })
 
-  const handlePageChange = (p: number) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.set('page', String(p))
-      return next
-    })
-  }
-
-  // ── Guard ──────────────────────────────────────────────────────────────────
+  // Guard
   if (!bid) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-5">
@@ -448,31 +300,22 @@ export function StockPage() {
   const allItems = allData?.data ?? []
   const meta = data?.meta
 
-  // Stats (from allItems for accuracy)
+  // Stats
   const totalItems = allData?.meta?.total ?? items.length
   const lowStockItems = allItems.filter(i => i.quantity > 0 && i.quantity <= i.minQuantity)
   const outOfStockItems = allItems.filter(i => i.quantity === 0)
   const inventoryValue = allItems.reduce((sum, i) => sum + i.quantity * (i.sellingPrice || 0), 0)
 
-  // Chart data: top 12 products by quantity (for stock level chart)
-  const chartItems = [...allItems]
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 12)
+  // Charts
+  const chartItems = [...allItems].sort((a, b) => b.quantity - a.quantity).slice(0, 12)
   const barData = chartItems.map(i => ({
     name: i.name.length > 14 ? i.name.slice(0, 14) + '…' : i.name,
-    Quantité: i.quantity,
-    Minimum: i.minQuantity,
+    Quantité: i.quantity, Minimum: i.minQuantity,
   }))
-
-  // Pie chart: category distribution
   const catMap: Record<string, number> = {}
-  for (const i of allItems) {
-    const c = i.category || 'Sans catégorie'
-    catMap[c] = (catMap[c] || 0) + 1
-  }
+  for (const i of allItems) { const c = i.category || 'Sans catégorie'; catMap[c] = (catMap[c] || 0) + 1 }
   const pieData = Object.entries(catMap).map(([name, value]) => ({ name, value }))
   const PIE_COLORS = ['#7C3AED', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
-
   const gridColor = isDark ? '#27272a' : '#e4e4e7'
   const textColor = isDark ? '#71717a' : '#a1a1aa'
 
@@ -502,313 +345,267 @@ export function StockPage() {
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          title="Total produits"
-          value={totalItems}
-          color="violet"
-          icon={<Icon name="package" size={18} />}
-        />
-        <StatCard
-          title="Stock bas"
-          value={lowStockItems.length}
-          subtitle={lowStockItems.length > 0 ? 'à réapprovisionner' : 'tout est OK'}
-          color={lowStockItems.length > 0 ? 'amber' : 'green'}
-          icon={<Icon name="alert" size={18} />}
-        />
-        <StatCard
-          title="Rupture"
-          value={outOfStockItems.length}
-          subtitle={outOfStockItems.length > 0 ? 'articles épuisés' : 'aucune rupture'}
-          color={outOfStockItems.length > 0 ? 'red' : 'green'}
-          icon={<Icon name="x" size={18} />}
-        />
-        <StatCard
-          title="Valeur stock"
-          value={fmt(inventoryValue, cur)}
-          color="green"
-          icon={<Icon name="dollar-sign" size={18} />}
-        />
+      {/* ── Search + Category filter ── */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <form onSubmit={applySearch} className="flex-1 relative">
+          <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Rechercher par nom ou SKU…"
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && applySearch()}
+            className="w-full pl-9 pr-8 py-2.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-2 focus:ring-emi-violet/20 shadow-sm transition"
+          />
+          {inputValue && (
+            <button type="button" onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+              <Icon name="x" size={14} />
+            </button>
+          )}
+        </form>
+        {categories && categories.length > 0 && (
+          <select
+            value={categoryFilter}
+            onChange={e => applyCategory(e.target.value)}
+            className="px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emi-violet shadow-sm transition"
+          >
+            <option value="">Toutes les catégories</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
       </div>
 
-      {/* ── Low-stock alert strip ── */}
-      {lowStockItems.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Icon name="alert" size={16} className="text-amber-500" />
-            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              {lowStockItems.length} produit{lowStockItems.length > 1 ? 's' : ''} en stock bas
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {lowStockItems.slice(0, 8).map(i => (
-              <button
-                key={i.id}
-                onClick={() => openStockIn(i)}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors"
-              >
-                <Icon name="plus" size={11} />
-                {i.name} ({i.quantity}/{i.minQuantity})
-              </button>
-            ))}
-            {lowStockItems.length > 8 && (
-              <span className="text-xs text-amber-500 self-center">+{lowStockItems.length - 8} autres</span>
-            )}
-          </div>
+      {/* Active filter chips */}
+      {(search || categoryFilter) && (
+        <div className="flex items-center gap-2 flex-wrap -mt-2">
+          {search && (
+            <span className="inline-flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-950/30 text-emi-violet border border-violet-100 dark:border-violet-800 px-2 py-0.5 rounded-full">
+              "{search}" <button onClick={clearSearch}><Icon name="x" size={10} /></button>
+            </span>
+          )}
+          {categoryFilter && (
+            <span className="inline-flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-950/30 text-emi-violet border border-violet-100 dark:border-violet-800 px-2 py-0.5 rounded-full">
+              {categoryFilter} <button onClick={() => applyCategory('')}><Icon name="x" size={10} /></button>
+            </span>
+          )}
         </div>
       )}
 
-      {/* ── Charts ── */}
-      {allItems.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowChart(v => !v)}
-            className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 mb-3 transition-colors"
-          >
-            <Icon name={showChart ? 'chevron-down' : 'chevron-right'} size={14} />
-            {showChart ? 'Masquer les graphiques' : 'Afficher les graphiques'}
-          </button>
+      {/* ── Product list ── */}
+      {items.length ? (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden shadow-sm">
+          {items.map(item => {
+            const isLow = item.quantity > 0 && item.quantity <= item.minQuantity
+            const isOut = item.quantity === 0
+            return (
+              <div
+                key={item.id}
+                className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
+                  isOut ? 'bg-red-50/40 dark:bg-red-950/10' : isLow ? 'bg-amber-50/40 dark:bg-amber-950/10' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
+                }`}
+              >
+                {/* Avatar */}
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColor(item.id)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                  {getInitials(item.name)}
+                </div>
 
-          {showChart && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in">
-              {/* Stock levels bar chart */}
-              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">Niveaux de stock</p>
-                <p className="text-xs text-zinc-400 mb-4">Top {chartItems.length} produits · quantité vs minimum</p>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barSize={10}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: textColor, fontSize: 10 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: textColor, fontSize: 10 }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        background: isDark ? '#18181b' : '#fff',
-                        border: `1px solid ${isDark ? '#3f3f46' : '#e4e4e7'}`,
-                        borderRadius: 10,
-                        fontSize: 12,
-                      }}
-                    />
-                    <Bar dataKey="Quantité" radius={[4, 4, 0, 0]}>
-                      {barData.map((entry, i) => (
-                        <Cell
-                          key={i}
-                          fill={entry.Quantité <= entry.Minimum ? '#EF4444' : entry.Quantité <= entry.Minimum * 1.5 ? '#F59E0B' : '#7C3AED'}
-                        />
-                      ))}
-                    </Bar>
-                    <Bar dataKey="Minimum" fill={isDark ? '#3f3f46' : '#e4e4e7'} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {/* Name + meta */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/stock/${item.id}`}
+                      className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:text-emi-violet transition-colors truncate"
+                    >
+                      {item.name}
+                    </Link>
+                    {isOut
+                      ? <span className="shrink-0 text-[10px] font-bold px-1.5 py-px rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400">Rupture</span>
+                      : isLow
+                      ? <span className="shrink-0 text-[10px] font-bold px-1.5 py-px rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">Bas</span>
+                      : null}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {item.category && (
+                      <span className="text-xs text-emi-violet bg-violet-50 dark:bg-violet-950/30 px-1.5 py-px rounded-full font-medium">
+                        {item.category}
+                      </span>
+                    )}
+                    <span className={`text-xs font-semibold tabular-nums ${isOut ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                      {item.quantity} {item.unit}
+                    </span>
+                    {item.sellingPrice != null && (
+                      <span className="text-xs text-zinc-400">{fmt(item.sellingPrice, cur)}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions — toujours visibles, zones tactiles larges */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Entrée stock — vert, bouton principal */}
+                  <button
+                    onClick={() => openStockIn(item)}
+                    className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 active:scale-95 transition-all text-xs font-semibold"
+                    title="Entrée stock"
+                  >
+                    <Icon name="arrow-down" size={14} />
+                    <span className="hidden sm:inline">Entrée</span>
+                  </button>
+                  {/* Modifier — neutre */}
+                  <button
+                    onClick={() => openEdit(item)}
+                    className="flex items-center justify-center w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all"
+                    title="Modifier"
+                  >
+                    <Icon name="edit" size={15} />
+                  </button>
+                  {/* Supprimer — rouge */}
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="flex items-center justify-center w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-400 hover:bg-red-500 hover:text-white active:scale-95 transition-all"
+                    title="Supprimer"
+                  >
+                    <Icon name="trash" size={15} />
+                  </button>
+                </div>
               </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 py-16 text-center shadow-sm">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-4">
+            <Icon name="stock" size={26} />
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {search || categoryFilter ? 'Aucun produit ne correspond à votre recherche.' : 'Aucun produit pour l\'instant.'}
+          </p>
+          {!search && !categoryFilter && (
+            <button onClick={() => setShowNewProduct(true)} className="mt-3 text-sm text-emi-violet hover:underline">
+              + Ajouter un produit
+            </button>
+          )}
+        </div>
+      )}
 
-              {/* Category pie */}
-              {pieData.length > 1 && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
-                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">Par catégorie</p>
-                  <p className="text-xs text-zinc-400 mb-3">Répartition des produits</p>
+      {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
+
+      {/* ── Stats Collapsible ── */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowStats(v => !v)}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+              className={`transition-transform duration-200 ${showStats ? 'rotate-0' : '-rotate-90'}`}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            Statistiques &amp; graphiques
+          </div>
+          {!showStats && lowStockItems.length > 0 && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+              {lowStockItems.length} stock bas
+            </span>
+          )}
+        </button>
+
+        {showStats && (
+          <div className="px-5 pb-5 space-y-5 border-t border-zinc-100 dark:border-zinc-800 pt-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <StatCard title="Total produits" value={totalItems} color="violet" icon={<Icon name="package" size={18} />} />
+              <StatCard
+                title="Stock bas" value={lowStockItems.length}
+                subtitle={lowStockItems.length > 0 ? 'à réapprovisionner' : 'tout est OK'}
+                color={lowStockItems.length > 0 ? 'amber' : 'green'}
+                icon={<Icon name="alert" size={18} />}
+              />
+              <StatCard
+                title="Rupture" value={outOfStockItems.length}
+                subtitle={outOfStockItems.length > 0 ? 'articles épuisés' : 'aucune rupture'}
+                color={outOfStockItems.length > 0 ? 'red' : 'green'}
+                icon={<Icon name="x" size={18} />}
+              />
+              <StatCard title="Valeur stock" value={fmt(inventoryValue, cur)} color="green" icon={<Icon name="dollar-sign" size={18} />} />
+            </div>
+
+            {/* Low-stock alert */}
+            {lowStockItems.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon name="alert" size={16} className="text-amber-500" />
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                    {lowStockItems.length} produit{lowStockItems.length > 1 ? 's' : ''} en stock bas — cliquez pour réapprovisionner
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {lowStockItems.slice(0, 8).map(i => (
+                    <button
+                      key={i.id}
+                      onClick={() => openStockIn(i)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-colors"
+                    >
+                      <Icon name="plus" size={11} />
+                      {i.name} ({i.quantity}/{i.minQuantity})
+                    </button>
+                  ))}
+                  {lowStockItems.length > 8 && (
+                    <span className="text-xs text-amber-500 self-center">+{lowStockItems.length - 8} autres</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Charts */}
+            {allItems.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">Niveaux de stock</p>
+                  <p className="text-xs text-zinc-400 mb-4">Top {chartItems.length} produits · quantité vs minimum</p>
                   <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={75}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {pieData.map((_, i) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barSize={10}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                      <XAxis dataKey="name" tick={{ fill: textColor, fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fill: textColor, fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ background: isDark ? '#18181b' : '#fff', border: `1px solid ${isDark ? '#3f3f46' : '#e4e4e7'}`, borderRadius: 10, fontSize: 12 }} />
+                      <Bar dataKey="Quantité" radius={[4, 4, 0, 0]}>
+                        {barData.map((entry, i) => (
+                          <Cell key={i} fill={entry.Quantité <= entry.Minimum ? '#EF4444' : entry.Quantité <= entry.Minimum * 1.5 ? '#F59E0B' : '#7C3AED'} />
                         ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: isDark ? '#18181b' : '#fff',
-                          border: `1px solid ${isDark ? '#3f3f46' : '#e4e4e7'}`,
-                          borderRadius: 10,
-                          fontSize: 12,
-                        }}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                    </PieChart>
+                      </Bar>
+                      <Bar dataKey="Minimum" fill={isDark ? '#3f3f46' : '#e4e4e7'} radius={[4, 4, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* ── Search + Filter + View toggle ── */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-2 p-3">
-          {/* Search */}
-          <form onSubmit={applySearch} className="flex-1 relative">
-            <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Rechercher par nom ou SKU…"
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && applySearch()}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-1 focus:ring-emi-violet/30 transition"
-            />
-            {inputValue && (
-              <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
-                <Icon name="x" size={14} />
-              </button>
-            )}
-          </form>
-
-          {/* Category filter */}
-          {categories && categories.length > 0 && (
-            <select
-              value={categoryFilter}
-              onChange={e => applyCategory(e.target.value)}
-              className="px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emi-violet transition"
-            >
-              <option value="">Toutes les catégories</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          )}
-
-          {/* View toggle */}
-          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
-            <button
-              onClick={() => setView('cards')}
-              className={`p-1.5 rounded-lg transition-colors ${view === 'cards' ? 'bg-white dark:bg-zinc-700 shadow-sm text-emi-violet' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}
-              title="Vue cartes"
-            >
-              <Icon name="grid" size={16} />
-            </button>
-            <button
-              onClick={() => setView('table')}
-              className={`p-1.5 rounded-lg transition-colors ${view === 'table' ? 'bg-white dark:bg-zinc-700 shadow-sm text-emi-violet' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}
-              title="Vue tableau"
-            >
-              <Icon name="list" size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Active filters */}
-        {(search || categoryFilter) && (
-          <div className="flex items-center gap-2 px-3 pb-3 flex-wrap">
-            {search && (
-              <span className="inline-flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-950/30 text-emi-violet border border-violet-100 dark:border-violet-800 px-2 py-0.5 rounded-full">
-                "{search}"
-                <button onClick={clearSearch}><Icon name="x" size={10} /></button>
-              </span>
-            )}
-            {categoryFilter && (
-              <span className="inline-flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-950/30 text-emi-violet border border-violet-100 dark:border-violet-800 px-2 py-0.5 rounded-full">
-                {categoryFilter}
-                <button onClick={() => applyCategory('')}><Icon name="x" size={10} /></button>
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* ── Cards view ── */}
-        {view === 'cards' && (
-          <div className="p-3 border-t border-zinc-100 dark:border-zinc-800">
-            {items.length ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {items.map(item => (
-                  <ProductCard
-                    key={item.id}
-                    item={item}
-                    cur={cur}
-                    onStockIn={openStockIn}
-                    onEdit={openEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="py-14 text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-4">
-                  <Icon name="stock" size={26} />
-                </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {search ? 'Aucun produit ne correspond à votre recherche.' : 'Aucun produit pour l\'instant. Ajoutez votre premier produit.'}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Table view ── */}
-        {view === 'table' && (
-          <div className="overflow-x-auto border-t border-zinc-100 dark:border-zinc-800">
-            <table className="w-full text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50">
-                <tr>
-                  {['Produit', 'Qté', 'Min', 'Unité', 'Achat', 'Vente', 'Statut', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {items.length ? items.map(item => {
-                  const isLow = item.quantity <= item.minQuantity
-                  const isOut = item.quantity === 0
-                  return (
-                    <tr key={item.id} className={`transition-colors ${isOut ? 'bg-red-50/40 dark:bg-red-950/10' : isLow ? 'bg-amber-50/40 dark:bg-amber-950/10' : 'hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30'}`}>
-                      <td className="px-4 py-3">
-                        <Link to={`/stock/${item.id}`} className="font-medium text-zinc-900 dark:text-zinc-100 hover:text-emi-violet transition-colors">
-                          {item.name}
-                        </Link>
-                        {item.sku && <p className="text-xs text-zinc-400">{item.sku}</p>}
-                      </td>
-                      <td className={`px-4 py-3 font-semibold ${isOut ? 'text-red-600' : isLow ? 'text-amber-600' : 'text-zinc-800 dark:text-zinc-200'}`}>
-                        {item.quantity}
-                      </td>
-                      <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{item.minQuantity}</td>
-                      <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">{item.unit}</td>
-                      <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                        {item.purchasePrice != null ? fmt(item.purchasePrice, cur) : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                        {item.sellingPrice != null ? fmt(item.sellingPrice, cur) : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {isOut ? <Badge variant="danger">Rupture</Badge> :
-                         isLow ? <Badge variant="warning">Bas</Badge> :
-                         <Badge variant="success">OK</Badge>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button onClick={() => openStockIn(item)} className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emi-green hover:bg-emi-green hover:text-white transition-colors" title="Entrée stock">
-                            <Icon name="plus" size={13} />
-                          </button>
-                          <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors" title="Modifier">
-                            <Icon name="edit" size={13} />
-                          </button>
-                          <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-500 hover:bg-red-100 transition-colors" title="Supprimer">
-                            <Icon name="trash" size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                }) : (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-zinc-400 dark:text-zinc-500">
-                      {search ? 'Aucun résultat.' : 'Aucun produit.'}
-                    </td>
-                  </tr>
+                {pieData.length > 1 ? (
+                  <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-4">
+                    <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">Par catégorie</p>
+                    <p className="text-xs text-zinc-400 mb-3">Répartition des produits</p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                          {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: isDark ? '#18181b' : '#fff', border: `1px solid ${isDark ? '#3f3f46' : '#e4e4e7'}`, borderRadius: 10, fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-4 flex flex-col justify-center items-center text-center gap-2">
+                    <div className="p-3 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet">
+                      <Icon name="stock" size={22} />
+                    </div>
+                    <p className="text-xs text-zinc-400">Ajoutez des catégories pour voir la répartition.</p>
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         )}
-
-        {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
       </div>
 
       {/* ── New Product Modal ── */}

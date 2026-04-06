@@ -55,6 +55,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['show']>>>
     }
   }
+  'profile.profile.update_profile': {
+    methods: ["PUT"]
+    pattern: '/api/v1/account/profile'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updateProfile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updateProfile']>>>
+    }
+  }
+  'profile.profile.update_password': {
+    methods: ["PUT"]
+    pattern: '/api/v1/account/password'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updatePassword']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updatePassword']>>>
+    }
+  }
+  'profile.profile.request_email_change': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/email/request'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['requestEmailChange']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['requestEmailChange']>>>
+    }
+  }
+  'profile.profile.verify_email_change': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/email/verify'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['verifyEmailChange']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['verifyEmailChange']>>>
+    }
+  }
   'dashboard.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/dashboard'
@@ -65,66 +113,6 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['show']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['show']>>>
-    }
-  }
-  'organizations.index': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/organizations'
-    types: {
-      body: {}
-      paramsTuple: []
-      params: {}
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['index']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['index']>>>
-    }
-  }
-  'organizations.store': {
-    methods: ["POST"]
-    pattern: '/api/v1/organizations'
-    types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
-      paramsTuple: []
-      params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
-    }
-  }
-  'organizations.show': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/organizations/:id'
-    types: {
-      body: {}
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['show']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['show']>>>
-    }
-  }
-  'organizations.update': {
-    methods: ["PUT"]
-    pattern: '/api/v1/organizations/:id'
-    types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/organization').updateOrganizationValidator)>>
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: ExtractQuery<InferInput<(typeof import('#validators/organization').updateOrganizationValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['update']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
-    }
-  }
-  'organizations.destroy': {
-    methods: ["DELETE"]
-    pattern: '/api/v1/organizations/:id'
-    types: {
-      body: {}
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['destroy']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['destroy']>>>
     }
   }
   'businesses.index': {
@@ -185,6 +173,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/businesses_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/businesses_controller').default['destroy']>>>
+    }
+  }
+  'transactions.beneficiaries': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/transactions/beneficiaries'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/transactions_controller').default['beneficiaries']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/transactions_controller').default['beneficiaries']>>>
     }
   }
   'transactions.index': {
@@ -749,6 +749,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['stockReport']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['stockReport']>>>
+    }
+  }
+  'profile.admin_update_user': {
+    methods: ["PUT"]
+    pattern: '/api/v1/admin/users/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['adminUpdateUser']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['adminUpdateUser']>>>
     }
   }
 }

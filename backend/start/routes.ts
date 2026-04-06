@@ -11,7 +11,6 @@ import { middleware } from '#start/kernel'
 import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
 
-const OrganizationsController = () => import('#controllers/organizations_controller')
 const BusinessesController = () => import('#controllers/businesses_controller')
 const TransactionsController = () => import('#controllers/transactions_controller')
 const StockItemsController = () => import('#controllers/stock_items_controller')
@@ -59,13 +58,6 @@ router
       .group(() => {
         // Dashboard
         router.get('dashboard', [DashboardController, 'show'])
-
-        // Organizations CRUD
-        router.get('organizations', [OrganizationsController, 'index'])
-        router.post('organizations', [OrganizationsController, 'store'])
-        router.get('organizations/:id', [OrganizationsController, 'show'])
-        router.put('organizations/:id', [OrganizationsController, 'update'])
-        router.delete('organizations/:id', [OrganizationsController, 'destroy'])
 
         // Businesses CRUD
         router.get('businesses', [BusinessesController, 'index'])

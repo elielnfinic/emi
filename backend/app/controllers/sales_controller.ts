@@ -3,6 +3,7 @@ import SaleItem from '#models/sale_item'
 import SalePayment from '#models/sale_payment'
 import StockItem from '#models/stock_item'
 import StockMovement from '#models/stock_movement'
+import Transaction from '#models/transaction'
 import { createSaleValidator, createSalePaymentValidator } from '#validators/sale'
 import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -35,7 +36,7 @@ export default class SalesController {
           })
       })
     }
-    return await query.orderBy('date', 'desc').paginate(page, perPage)
+    return await query.orderBy('date', 'desc').orderBy('createdAt', 'desc').paginate(page, perPage)
   }
 
   async store(ctx: HttpContext) {
@@ -110,6 +111,25 @@ export default class SalesController {
       })
     }
 
+    // Auto-create a linked income transaction
+    const lastTx = await Transaction.query()
+      .where('businessId', data.businessId)
+      .where('type', 'income')
+      .orderBy('id', 'desc')
+      .first()
+    const txPrefix = 'ENT'
+    const txNextNum = lastTx ? Number.parseInt(lastTx.reference.split('-')[1] || '0') + 1 : 1
+    const txReference = `${txPrefix}-${String(txNextNum).padStart(4, '0')}`
+    await Transaction.create({
+      businessId: data.businessId,
+      userId: user.id,
+      reference: txReference,
+      type: 'income',
+      amount: totalAmount,
+      description: `sale:${reference}`,
+      date: DateTime.fromISO(data.date),
+    })
+
     await sale.load('items')
     await sale.load('customer')
     await sale.load('user')
@@ -151,6 +171,13 @@ export default class SalesController {
   async destroy(ctx: HttpContext) {
     const sale = await Sale.findOrFail(ctx.params.id)
     await verifyBusinessAccess(ctx, sale.businessId, ['admin', 'manager'])
+
+    // Delete the auto-created linked income transaction (if any)
+    await Transaction.query()
+      .where('businessId', sale.businessId)
+      .where('description', `sale:${sale.reference}`)
+      .delete()
+
     await sale.delete()
     return { message: 'Sale deleted successfully' }
   }

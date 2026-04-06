@@ -441,7 +441,7 @@ function EditUserModal({
 
 function AdminUsersTab() {
   const queryClient = useQueryClient()
-  const [search, setSearch] = useState('')
+  const [search] = useState('')
   const [editing, setEditing] = useState<UserItem | null>(null)
 
   const { data: users = [], isLoading } = useQuery<UserItem[]>({

@@ -30,7 +30,7 @@ export default class TransactionsController {
           .orWhereILike('beneficiary', `%${search}%`)
       })
     }
-    return await query.orderBy('date', 'desc').paginate(page, perPage)
+    return await query.orderBy('date', 'desc').orderBy('createdAt', 'desc').paginate(page, perPage)
   }
 
   async store(ctx: HttpContext) {
@@ -90,5 +90,41 @@ export default class TransactionsController {
     await verifyBusinessAccess(ctx, transaction.businessId, ['admin', 'manager'])
     await transaction.delete()
     return { message: 'Transaction deleted successfully' }
+  }
+
+  async beneficiaries(ctx: HttpContext) {
+    const businessId = ctx.request.input('business_id')
+    const search = ctx.request.input('search', '')
+    const page = Number(ctx.request.input('page', 1))
+    const perPage = Number(ctx.request.input('per_page', 15))
+    await verifyBusinessAccess(ctx, businessId)
+
+    const countQuery = Transaction.query()
+      .where('businessId', businessId)
+      .whereNotNull('beneficiary')
+      .whereRaw("trim(beneficiary) != ''")
+      .countDistinct('beneficiary as total')
+    if (search) countQuery.whereILike('beneficiary', `%${search}%`)
+    const countResult = await countQuery.first()
+
+    const total = Number(countResult?.$extras.total ?? 0)
+    const lastPage = Math.max(1, Math.ceil(total / perPage))
+
+    const dataQuery = Transaction.query()
+      .where('businessId', businessId)
+      .whereNotNull('beneficiary')
+      .whereRaw("trim(beneficiary) != ''")
+      .select('beneficiary')
+      .groupBy('beneficiary')
+      .orderBy('beneficiary', 'asc')
+      .offset((page - 1) * perPage)
+      .limit(perPage)
+    if (search) dataQuery.whereILike('beneficiary', `%${search}%`)
+    const results = await dataQuery
+
+    return {
+      data: results.map((t) => t.beneficiary as string),
+      meta: { total, perPage, currentPage: page, lastPage, firstPage: 1 },
+    }
   }
 }

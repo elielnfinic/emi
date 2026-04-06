@@ -30,41 +30,35 @@ const routes = {
     tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
     types: placeholder as Registry['profile.profile.show']['types'],
   },
+  'profile.profile.update_profile': {
+    methods: ["PUT"],
+    pattern: '/api/v1/account/profile',
+    tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
+    types: placeholder as Registry['profile.profile.update_profile']['types'],
+  },
+  'profile.profile.update_password': {
+    methods: ["PUT"],
+    pattern: '/api/v1/account/password',
+    tokens: [{"old":"/api/v1/account/password","type":0,"val":"api","end":""},{"old":"/api/v1/account/password","type":0,"val":"v1","end":""},{"old":"/api/v1/account/password","type":0,"val":"account","end":""},{"old":"/api/v1/account/password","type":0,"val":"password","end":""}],
+    types: placeholder as Registry['profile.profile.update_password']['types'],
+  },
+  'profile.profile.request_email_change': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/email/request',
+    tokens: [{"old":"/api/v1/account/email/request","type":0,"val":"api","end":""},{"old":"/api/v1/account/email/request","type":0,"val":"v1","end":""},{"old":"/api/v1/account/email/request","type":0,"val":"account","end":""},{"old":"/api/v1/account/email/request","type":0,"val":"email","end":""},{"old":"/api/v1/account/email/request","type":0,"val":"request","end":""}],
+    types: placeholder as Registry['profile.profile.request_email_change']['types'],
+  },
+  'profile.profile.verify_email_change': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/email/verify',
+    tokens: [{"old":"/api/v1/account/email/verify","type":0,"val":"api","end":""},{"old":"/api/v1/account/email/verify","type":0,"val":"v1","end":""},{"old":"/api/v1/account/email/verify","type":0,"val":"account","end":""},{"old":"/api/v1/account/email/verify","type":0,"val":"email","end":""},{"old":"/api/v1/account/email/verify","type":0,"val":"verify","end":""}],
+    types: placeholder as Registry['profile.profile.verify_email_change']['types'],
+  },
   'dashboard.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/dashboard',
     tokens: [{"old":"/api/v1/dashboard","type":0,"val":"api","end":""},{"old":"/api/v1/dashboard","type":0,"val":"v1","end":""},{"old":"/api/v1/dashboard","type":0,"val":"dashboard","end":""}],
     types: placeholder as Registry['dashboard.show']['types'],
-  },
-  'organizations.index': {
-    methods: ["GET","HEAD"],
-    pattern: '/api/v1/organizations',
-    tokens: [{"old":"/api/v1/organizations","type":0,"val":"api","end":""},{"old":"/api/v1/organizations","type":0,"val":"v1","end":""},{"old":"/api/v1/organizations","type":0,"val":"organizations","end":""}],
-    types: placeholder as Registry['organizations.index']['types'],
-  },
-  'organizations.store': {
-    methods: ["POST"],
-    pattern: '/api/v1/organizations',
-    tokens: [{"old":"/api/v1/organizations","type":0,"val":"api","end":""},{"old":"/api/v1/organizations","type":0,"val":"v1","end":""},{"old":"/api/v1/organizations","type":0,"val":"organizations","end":""}],
-    types: placeholder as Registry['organizations.store']['types'],
-  },
-  'organizations.show': {
-    methods: ["GET","HEAD"],
-    pattern: '/api/v1/organizations/:id',
-    tokens: [{"old":"/api/v1/organizations/:id","type":0,"val":"api","end":""},{"old":"/api/v1/organizations/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/organizations/:id","type":0,"val":"organizations","end":""},{"old":"/api/v1/organizations/:id","type":1,"val":"id","end":""}],
-    types: placeholder as Registry['organizations.show']['types'],
-  },
-  'organizations.update': {
-    methods: ["PUT"],
-    pattern: '/api/v1/organizations/:id',
-    tokens: [{"old":"/api/v1/organizations/:id","type":0,"val":"api","end":""},{"old":"/api/v1/organizations/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/organizations/:id","type":0,"val":"organizations","end":""},{"old":"/api/v1/organizations/:id","type":1,"val":"id","end":""}],
-    types: placeholder as Registry['organizations.update']['types'],
-  },
-  'organizations.destroy': {
-    methods: ["DELETE"],
-    pattern: '/api/v1/organizations/:id',
-    tokens: [{"old":"/api/v1/organizations/:id","type":0,"val":"api","end":""},{"old":"/api/v1/organizations/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/organizations/:id","type":0,"val":"organizations","end":""},{"old":"/api/v1/organizations/:id","type":1,"val":"id","end":""}],
-    types: placeholder as Registry['organizations.destroy']['types'],
   },
   'businesses.index': {
     methods: ["GET","HEAD"],
@@ -95,6 +89,12 @@ const routes = {
     pattern: '/api/v1/businesses/:id',
     tokens: [{"old":"/api/v1/businesses/:id","type":0,"val":"api","end":""},{"old":"/api/v1/businesses/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/businesses/:id","type":0,"val":"businesses","end":""},{"old":"/api/v1/businesses/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['businesses.destroy']['types'],
+  },
+  'transactions.beneficiaries': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/transactions/beneficiaries',
+    tokens: [{"old":"/api/v1/transactions/beneficiaries","type":0,"val":"api","end":""},{"old":"/api/v1/transactions/beneficiaries","type":0,"val":"v1","end":""},{"old":"/api/v1/transactions/beneficiaries","type":0,"val":"transactions","end":""},{"old":"/api/v1/transactions/beneficiaries","type":0,"val":"beneficiaries","end":""}],
+    types: placeholder as Registry['transactions.beneficiaries']['types'],
   },
   'transactions.index': {
     methods: ["GET","HEAD"],
@@ -377,6 +377,12 @@ const routes = {
     pattern: '/api/v1/reports/stock',
     tokens: [{"old":"/api/v1/reports/stock","type":0,"val":"api","end":""},{"old":"/api/v1/reports/stock","type":0,"val":"v1","end":""},{"old":"/api/v1/reports/stock","type":0,"val":"reports","end":""},{"old":"/api/v1/reports/stock","type":0,"val":"stock","end":""}],
     types: placeholder as Registry['reports.stock_report']['types'],
+  },
+  'profile.admin_update_user': {
+    methods: ["PUT"],
+    pattern: '/api/v1/admin/users/:id',
+    tokens: [{"old":"/api/v1/admin/users/:id","type":0,"val":"api","end":""},{"old":"/api/v1/admin/users/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/admin/users/:id","type":0,"val":"admin","end":""},{"old":"/api/v1/admin/users/:id","type":0,"val":"users","end":""},{"old":"/api/v1/admin/users/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['profile.admin_update_user']['types'],
   },
 } as const satisfies Record<string, AdonisEndpoint>
 

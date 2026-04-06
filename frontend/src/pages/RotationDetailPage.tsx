@@ -73,29 +73,6 @@ export function RotationDetailPage() {
   const isActive = rotation.status === 'active'
   const days = daysBetween(rotation.startDate, rotation.endDate)
 
-  // Merged timeline sorted by date
-  type TimelineItem =
-    | { kind: 'tx'; date: string; label: string; amount: number; type: 'income' | 'expense'; ref: string }
-    | { kind: 'sale'; date: string; label: string; amount: number; status: string; ref: string }
-
-  const timeline: TimelineItem[] = [
-    ...transactions.map(t => ({
-      kind: 'tx' as const,
-      date: t.date,
-      label: t.description || t.reference,
-      amount: Number(t.amount),
-      type: t.type,
-      ref: t.reference,
-    })),
-    ...sales.map(s => ({
-      kind: 'sale' as const,
-      date: s.date,
-      label: s.customer?.name || `Vente ${s.reference}`,
-      amount: Number(s.totalAmount),
-      status: s.status,
-      ref: s.reference,
-    })),
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   return (
     <div className="space-y-5">

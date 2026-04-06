@@ -12,7 +12,7 @@ export default class CustomersController {
     await verifyBusinessAccess(ctx, businessId)
     const query = Customer.query()
       .where('businessId', businessId)
-      .orderBy('name', 'asc')
+      .orderBy('createdAt', 'desc')
     if (search) {
       query.where((q) => {
         q.whereILike('name', `%${search}%`)

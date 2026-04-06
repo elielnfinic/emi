@@ -12,7 +12,7 @@ export default class SuppliersController {
     await verifyBusinessAccess(ctx, businessId)
     const query = Supplier.query()
       .where('businessId', businessId)
-      .orderBy('name', 'asc')
+      .orderBy('createdAt', 'desc')
     if (search) {
       query.where((q) => {
         q.whereILike('name', `%${search}%`)

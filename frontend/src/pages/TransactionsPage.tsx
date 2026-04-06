@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { Select } from '../components/ui/Select'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
@@ -31,7 +30,7 @@ function BeneficiaryAutocomplete({
   const [page, setPage] = useState(1)
   const [accumulated, setAccumulated] = useState<string[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const prevSearchRef = useRef('')
 
   const { data, isFetching } = useQuery<BeneficiaryResult>({
@@ -185,6 +184,7 @@ export function TransactionsPage() {
   const [showModal, setShowModal] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [successType, setSuccessType] = useState<'income' | 'expense'>('income')
+  const [statsOpen, setStatsOpen] = useState(false)
 
   const [type, setType] = useState('income')
   const [amount, setAmount] = useState('')
@@ -200,6 +200,18 @@ export function TransactionsPage() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setInputValue(search) }, [search])
+
+  // Auto-open modal when navigated from dashboard quick action
+  useEffect(() => {
+    const action = searchParams.get('action')
+    if (action === 'income' || action === 'expense') {
+      setType(action)
+      setAmount(''); setDescription(''); setBeneficiary('')
+      setDate(new Date().toISOString().split('T')[0])
+      setShowModal(true)
+      setSearchParams(prev => { const n = new URLSearchParams(prev); n.delete('action'); return n }, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, isLoading } = useQuery<PaginatedResponse<Transaction>>({
     queryKey: ['transactions', bid, search, page, typeFilter],
@@ -315,134 +327,178 @@ export function TransactionsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Transactions</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            {currentBusiness?.name} · {meta?.total ?? transactions.length} transaction{(meta?.total ?? transactions.length) !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { resetForm(); setType('income'); setShowModal(true) }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors shadow-sm"
-          >
-            <Icon name="arrow-up" size={14} /> Entrée d'argent
-          </button>
-          <button
-            onClick={() => { resetForm(); setType('expense'); setShowModal(true) }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors shadow-sm"
-          >
-            <Icon name="arrow-down" size={14} /> Dépense
-          </button>
-        </div>
+      <div>
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Transactions</h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+          {currentBusiness?.name} · {meta?.total ?? transactions.length} transaction{(meta?.total ?? transactions.length) !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard title="Revenus" value={fmt(totalIncome, cur)} color="green" icon={<Icon name="arrow-up" size={18} />} />
-        <StatCard title="Dépenses" value={fmt(totalExpense, cur)} color="red" icon={<Icon name="arrow-down" size={18} />} />
-        <StatCard title="Net" value={fmt(totalIncome - totalExpense, cur)} color={totalIncome >= totalExpense ? 'violet' : 'red'} icon={<Icon name="wallet" size={18} />} />
+      {/* Action list */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+        {/* Expense row */}
+        <button
+          type="button"
+          onClick={() => { resetForm(); setType('expense'); setShowModal(true) }}
+          className="w-full flex items-center gap-4 px-5 py-4 hover:bg-red-50/40 dark:hover:bg-red-950/10 transition-colors group text-left"
+        >
+          <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0 group-hover:bg-red-200 dark:group-hover:bg-red-950/60 transition-colors">
+            <Icon name="arrow-down" size={20} className="text-red-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Enregistrer une dépense</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Loyer, fournitures, salaires, charges…</p>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center shrink-0 shadow-sm group-hover:bg-red-600 transition-colors">
+            <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
+          </div>
+        </button>
+
+        {/* Income row */}
+        <button
+          type="button"
+          onClick={() => { resetForm(); setType('income'); setShowModal(true) }}
+          className="w-full flex items-center gap-4 px-5 py-4 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/10 transition-colors group text-left"
+        >
+          <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-950/60 transition-colors">
+            <Icon name="arrow-up" size={20} className="text-emerald-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Enregistrer une entrée</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Virement reçu, paiement client, remboursement…</p>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0 shadow-sm group-hover:bg-emerald-600 transition-colors">
+            <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
+          </div>
+        </button>
       </div>
 
-      {/* Search + filter */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-2 p-3">
-          <div className="relative flex-1">
-            <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Rechercher par référence, description ou bénéficiaire…"
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && applySearch()}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-1 focus:ring-emi-violet/30 transition"
-            />
-            {inputValue && (
-              <button onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
-                <Icon name="x" size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Type filter */}
-          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
-            {(['', 'income', 'expense'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  typeFilter === t
-                    ? t === 'income' ? 'bg-emerald-500 text-white' : t === 'expense' ? 'bg-red-500 text-white' : 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-700 dark:text-zinc-200'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                }`}
-              >
-                {t === '' ? 'Tous' : t === 'income' ? 'Revenus' : 'Dépenses'}
-              </button>
-            ))}
-          </div>
+      {/* Collapsible: stats + history */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        {/* Collapsible header */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-zinc-100 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setStatsOpen(v => !v)}
+            className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+              className={`transition-transform duration-200 ${statsOpen ? 'rotate-0' : '-rotate-90'}`}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            Statistiques & historique
+            {meta && <span className="text-xs font-normal text-zinc-400 ml-0.5">· {meta.total}</span>}
+          </button>
         </div>
 
-        {/* List */}
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800 border-t border-zinc-100 dark:border-zinc-800">
-          {transactions.length ? transactions.map(tx => (
-            <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-              {/* Icon bubble */}
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                tx.type === 'income'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emi-green'
-                  : 'bg-red-50 dark:bg-red-950/30 text-red-500'
-              }`}>
-                <Icon name={tx.type === 'income' ? 'arrow-up' : 'arrow-down'} size={14} />
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                  {tx.description || tx.reference}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs text-zinc-400">{tx.date}</p>
-                  {tx.beneficiary && <span className="text-xs text-zinc-400 truncate">· {tx.beneficiary}</span>}
-                  {tx.category && <Badge variant="info">{tx.category.name}</Badge>}
-                </div>
-              </div>
-
-              {/* Amount */}
-              <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${tx.type === 'income' ? 'text-emi-green' : 'text-red-500'}`}>
-                  {tx.type === 'income' ? '+' : '−'}{fmt(Number(tx.amount), cur)}
-                </p>
-                <p className="text-xs text-zinc-400">{tx.reference}</p>
-              </div>
-
-              {/* Delete */}
-              <button
-                onClick={() => { if (window.confirm('Supprimer cette transaction ?')) deleteMutation.mutate(tx.id) }}
-                className="shrink-0 p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-              >
-                <Icon name="trash" size={13} />
-              </button>
+        {statsOpen && (
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {/* KPI row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
+              <StatCard title="Revenus" value={fmt(totalIncome, cur)} color="green" icon={<Icon name="arrow-up" size={18} />} />
+              <StatCard title="Dépenses" value={fmt(totalExpense, cur)} color="red" icon={<Icon name="arrow-down" size={18} />} />
+              <StatCard title="Net" value={fmt(totalIncome - totalExpense, cur)} color={totalIncome >= totalExpense ? 'violet' : 'red'} icon={<Icon name="wallet" size={18} />} />
             </div>
-          )) : (
-            <div className="py-14 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-3">
-                <Icon name="arrow-up-down" size={22} />
+
+            {/* Search + filter */}
+            <div className="flex flex-col sm:flex-row gap-2 p-3">
+              <div className="relative flex-1">
+                <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  placeholder="Rechercher par référence, description ou bénéficiaire…"
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && applySearch()}
+                  className="w-full pl-9 pr-8 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-1 focus:ring-emi-violet/30 transition"
+                />
+                {inputValue && (
+                  <button onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+                    <Icon name="x" size={14} />
+                  </button>
+                )}
               </div>
-              <p className="text-sm text-zinc-400">
-                {search ? 'Aucune transaction ne correspond.' : 'Aucune transaction. Ajoutez votre première transaction.'}
-              </p>
-              {!search && (
-                <button onClick={() => { resetForm(); setShowModal(true) }} className="mt-2 text-sm text-emi-violet hover:underline">
-                  + Ajouter une transaction
-                </button>
+
+              {/* Type filter */}
+              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
+                {(['', 'income', 'expense'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTypeFilter(t)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      typeFilter === t
+                        ? t === 'income' ? 'bg-emerald-500 text-white' : t === 'expense' ? 'bg-red-500 text-white' : 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-700 dark:text-zinc-200'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    {t === '' ? 'Tous' : t === 'income' ? 'Revenus' : 'Dépenses'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Transaction list */}
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {transactions.length ? transactions.map(tx => (
+                <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                  {/* Icon bubble */}
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    tx.type === 'income'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emi-green'
+                      : 'bg-red-50 dark:bg-red-950/30 text-red-500'
+                  }`}>
+                    <Icon name={tx.type === 'income' ? 'arrow-up' : 'arrow-down'} size={14} />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                      {tx.description || tx.reference}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-zinc-400">{tx.date}</p>
+                      {tx.beneficiary && <span className="text-xs text-zinc-400 truncate">· {tx.beneficiary}</span>}
+                      {tx.category && <Badge variant="info">{tx.category.name}</Badge>}
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="text-right shrink-0">
+                    <p className={`text-sm font-bold ${tx.type === 'income' ? 'text-emi-green' : 'text-red-500'}`}>
+                      {tx.type === 'income' ? '+' : '−'}{fmt(Number(tx.amount), cur)}
+                    </p>
+                    <p className="text-xs text-zinc-400">{tx.reference}</p>
+                  </div>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => { if (window.confirm('Supprimer cette transaction ?')) deleteMutation.mutate(tx.id) }}
+                    className="shrink-0 p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  >
+                    <Icon name="trash" size={13} />
+                  </button>
+                </div>
+              )) : (
+                <div className="py-14 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-violet-50 dark:bg-violet-950/30 text-emi-violet mb-3">
+                    <Icon name="arrow-up-down" size={22} />
+                  </div>
+                  <p className="text-sm text-zinc-400">
+                    {search ? 'Aucune transaction ne correspond.' : 'Aucune transaction. Ajoutez votre première transaction.'}
+                  </p>
+                  {!search && (
+                    <button onClick={() => { resetForm(); setShowModal(true) }} className="mt-2 text-sm text-emi-violet hover:underline">
+                      + Ajouter une transaction
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
+            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
+          </div>
+        )}
       </div>
 
       {/* Create Modal */}

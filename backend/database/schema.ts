@@ -52,7 +52,7 @@ export class BusinessUserSchema extends BaseModel {
 }
 
 export class BusinessSchema extends BaseModel {
-  static $columns = ['address', 'createdAt', 'currency', 'id', 'isActive', 'name', 'organizationId', 'phone', 'slug', 'supportsRotations', 'type', 'updatedAt'] as const
+  static $columns = ['address', 'createdAt', 'currency', 'id', 'isActive', 'name', 'phone', 'slug', 'supportsRotations', 'type', 'updatedAt'] as const
   $columns = BusinessSchema.$columns
   @column()
   declare address: string | null
@@ -66,8 +66,6 @@ export class BusinessSchema extends BaseModel {
   declare isActive: boolean | null
   @column()
   declare name: string
-  @column()
-  declare organizationId: number
   @column()
   declare phone: string | null
   @column()
@@ -99,23 +97,6 @@ export class CustomerSchema extends BaseModel {
   declare notes: string | null
   @column()
   declare phone: string | null
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime | null
-}
-
-export class OrganizationSchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'logoUrl', 'name', 'slug', 'updatedAt'] as const
-  $columns = OrganizationSchema.$columns
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare logoUrl: string | null
-  @column()
-  declare name: string
-  @column()
-  declare slug: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
@@ -246,10 +227,12 @@ export class SaleSchema extends BaseModel {
 }
 
 export class StockItemSchema extends BaseModel {
-  static $columns = ['businessId', 'createdAt', 'description', 'id', 'isActive', 'minQuantity', 'name', 'purchasePrice', 'quantity', 'sellingPrice', 'sku', 'unit', 'updatedAt'] as const
+  static $columns = ['businessId', 'category', 'createdAt', 'description', 'id', 'isActive', 'minQuantity', 'name', 'purchasePrice', 'quantity', 'sellingPrice', 'sku', 'unit', 'updatedAt'] as const
   $columns = StockItemSchema.$columns
   @column()
   declare businessId: number
+  @column()
+  declare category: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -277,7 +260,7 @@ export class StockItemSchema extends BaseModel {
 }
 
 export class StockMovementSchema extends BaseModel {
-  static $columns = ['businessId', 'createdAt', 'date', 'id', 'notes', 'quantity', 'reason', 'reference', 'stockItemId', 'type', 'unitPrice', 'updatedAt', 'userId'] as const
+  static $columns = ['businessId', 'createdAt', 'date', 'id', 'notes', 'quantity', 'reason', 'reference', 'rotationId', 'stockItemId', 'supplierId', 'type', 'unitPrice', 'updatedAt', 'userId'] as const
   $columns = StockMovementSchema.$columns
   @column()
   declare businessId: number
@@ -296,7 +279,11 @@ export class StockMovementSchema extends BaseModel {
   @column()
   declare reference: string | null
   @column()
+  declare rotationId: number | null
+  @column()
   declare stockItemId: number
+  @column()
+  declare supplierId: number | null
   @column()
   declare type: string
   @column()
@@ -404,20 +391,26 @@ export class TransactionSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'organizationId', 'password', 'roleId', 'updatedAt'] as const
+  static $columns = ['createdAt', 'email', 'emailOtp', 'emailOtpExpiresAt', 'fullName', 'id', 'password', 'pendingEmail', 'phone', 'roleId', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
   declare email: string
   @column()
+  declare emailOtp: string | null
+  @column.dateTime()
+  declare emailOtpExpiresAt: DateTime | null
+  @column()
   declare fullName: string | null
   @column({ isPrimary: true })
   declare id: number
-  @column()
-  declare organizationId: number | null
   @column({ serializeAs: null })
   declare password: string
+  @column()
+  declare pendingEmail: string | null
+  @column()
+  declare phone: string | null
   @column()
   declare roleId: number | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })

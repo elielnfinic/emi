@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Loader } from '../components/ui/Loader'
-import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { StatCard } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
@@ -11,21 +10,40 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { useAppStore, useThemeStore } from '../stores'
 import api from '../services/api'
-import type { Supplier, Transaction, PaginatedResponse } from '../types'
+import type { Supplier, PaginatedResponse } from '../types'
+
+interface StockMovement {
+  id: number
+  stockItemId: number
+  type: string
+  quantity: number
+  unitPrice: number | null
+  date: string
+  notes: string | null
+  reference: string | null
+  stockItem?: { id: number; name: string; unit: string | null }
+  user?: { id: number; fullName: string | null; email: string }
+}
 
 function fmt(n: number, currency = 'USD') {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
 }
 
-function buildChartData(transactions: Transaction[]) {
-  const monthly: Record<string, number> = {}
-  for (const tx of transactions) {
-    const d = tx.date?.toString().slice(0, 7) ?? 'N/A'
-    monthly[d] = (monthly[d] || 0) + Number(tx.amount)
+function fmtQty(n: number, unit?: string | null) {
+  return unit ? `${n} ${unit}` : String(n)
+}
+
+function buildChartData(movements: StockMovement[]) {
+  const monthly: Record<string, { qty: number; cost: number }> = {}
+  for (const m of movements) {
+    const d = m.date?.toString().slice(0, 7) ?? 'N/A'
+    if (!monthly[d]) monthly[d] = { qty: 0, cost: 0 }
+    monthly[d].qty += Number(m.quantity)
+    monthly[d].cost += Number(m.quantity) * Number(m.unitPrice ?? 0)
   }
   return Object.entries(monthly)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, total]) => ({ month, total }))
+    .map(([month, v]) => ({ month, ...v }))
 }
 
 function getInitials(name: string) {
@@ -54,14 +72,14 @@ export function SupplierDetailPage() {
     enabled: !!id,
   })
 
-  // Transactions endpoint returns paginated response
-  const { data: txPage, isLoading: loadingTx } = useQuery<PaginatedResponse<Transaction>>({
-    queryKey: ['supplier-transactions', id, bid, supplier?.name],
+  // Fetch all inbound stock movements for this supplier
+  const { data: movPage, isLoading: loadingMov } = useQuery<PaginatedResponse<StockMovement>>({
+    queryKey: ['supplier-movements', id, bid],
     queryFn: async () =>
-      (await api.get('/transactions', {
-        params: { business_id: bid, type: 'expense', beneficiary: supplier?.name, per_page: 200 },
+      (await api.get('/stock-transactions', {
+        params: { business_id: bid, type: 'in', supplier_id: id, per_page: 200 },
       })).data,
-    enabled: !!id && !!bid && !!supplier?.name,
+    enabled: !!id && !!bid,
   })
 
   const updateMutation = useMutation({
@@ -80,7 +98,7 @@ export function SupplierDetailPage() {
     setShowEdit(true)
   }
 
-  if (loadingSupplier || loadingTx) return <Loader />
+  if (loadingSupplier || loadingMov) return <Loader />
   if (!supplier) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <p className="text-zinc-500 dark:text-zinc-400">Fournisseur introuvable.</p>
@@ -88,10 +106,11 @@ export function SupplierDetailPage() {
     </div>
   )
 
-  const transactions = txPage?.data ?? []
-  const totalExpenses = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0)
-  const avgTx = transactions.length > 0 ? totalExpenses / transactions.length : 0
-  const chartData = buildChartData(transactions)
+  const movements: StockMovement[] = movPage?.data ?? []
+  const totalCost = movements.reduce((sum, m) => sum + Number(m.quantity) * Number(m.unitPrice ?? 0), 0)
+  const totalQty = movements.reduce((sum, m) => sum + Number(m.quantity), 0)
+  const avgCost = movements.length > 0 ? totalCost / movements.length : 0
+  const chartData = buildChartData(movements)
   const gridColor = isDark ? '#27272a' : '#e4e4e7'
   const textColor = isDark ? '#71717a' : '#a1a1aa'
 
@@ -142,16 +161,31 @@ export function SupplierDetailPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard title="Total dépenses" value={fmt(totalExpenses, cur)} color="red" icon={<Icon name="arrow-down" size={18} />} />
-        <StatCard title="Transactions" value={transactions.length} color="violet" icon={<Icon name="bar-chart" size={18} />} />
-        <StatCard title="Moyenne / transaction" value={fmt(avgTx, cur)} color="blue" icon={<Icon name="trending-up" size={18} />} />
+        <StatCard
+          title="Total achats"
+          value={fmt(totalCost, cur)}
+          color="red"
+          icon={<Icon name="arrow-down" size={18} />}
+        />
+        <StatCard
+          title="Approvisionnements"
+          value={movements.length}
+          color="violet"
+          icon={<Icon name="stock" size={18} />}
+        />
+        <StatCard
+          title="Moy. / approvisionnement"
+          value={fmt(avgCost, cur)}
+          color="blue"
+          icon={<Icon name="trending-up" size={18} />}
+        />
       </div>
 
       {/* Monthly chart */}
       {chartData.length > 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">Évolution des dépenses</h3>
-          <p className="text-xs text-zinc-400 mb-4">Montant total par mois</p>
+          <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">Évolution des achats</h3>
+          <p className="text-xs text-zinc-400 mb-4">Coût total par mois</p>
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <defs>
@@ -169,46 +203,70 @@ export function SupplierDetailPage() {
                   border: `1px solid ${isDark ? '#3f3f46' : '#e4e4e7'}`,
                   borderRadius: 10, fontSize: 12,
                 }}
-                formatter={(v) => [fmt(Number(v), cur), 'Dépenses']}
+                formatter={(v) => [fmt(Number(v), cur), 'Coût']}
               />
-              <Area type="monotone" dataKey="total" stroke="#EF4444" strokeWidth={2} fill="url(#gradSupplier)" dot={false} activeDot={{ r: 4, fill: '#EF4444' }} />
+              <Area type="monotone" dataKey="cost" stroke="#EF4444" strokeWidth={2} fill="url(#gradSupplier)" dot={false} activeDot={{ r: 4, fill: '#EF4444' }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Transactions list */}
+      {/* Movements list */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-950/30 text-emi-violet">
-            <Icon name="arrow-up-down" size={14} />
+            <Icon name="stock" size={14} />
           </div>
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Transactions de dépenses</h3>
-          <span className="ml-auto text-xs text-zinc-400">{transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</span>
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Historique des approvisionnements</h3>
+          <span className="ml-auto text-xs text-zinc-400">
+            {movements.length} entrée{movements.length !== 1 ? 's' : ''}
+          </span>
         </div>
 
-        {transactions.length ? (
+        {movements.length ? (
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {transactions.map(tx => (
-              <div key={tx.id} className="flex items-center justify-between px-5 py-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                    {tx.description || tx.reference}
-                  </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs text-zinc-400">{tx.date?.toString().slice(0, 10)}</p>
-                    {tx.category && <Badge variant="info">{tx.category.name}</Badge>}
+            {movements.map(m => {
+              const lineCost = Number(m.quantity) * Number(m.unitPrice ?? 0)
+              return (
+                <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                      {m.stockItem?.name ?? `Article #${m.stockItemId}`}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                      <span className="text-xs text-zinc-400">{m.date?.toString().slice(0, 10)}</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {fmtQty(Number(m.quantity), m.stockItem?.unit)}
+                        {m.unitPrice != null && (
+                          <> × {fmt(Number(m.unitPrice), cur)}</>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-red-500">
+                      {lineCost > 0 ? `-${fmt(lineCost, cur)}` : '—'}
+                    </p>
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-red-500 shrink-0">
-                  -{fmt(Number(tx.amount), cur)}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="px-5 py-12 text-center">
-            <p className="text-sm text-zinc-400">Aucune transaction de dépense enregistrée pour ce fournisseur.</p>
+            <p className="text-sm text-zinc-400">Aucun approvisionnement enregistré pour ce fournisseur.</p>
+          </div>
+        )}
+
+        {/* Summary footer */}
+        {movements.length > 0 && (
+          <div className="px-5 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Quantité totale : <strong className="text-zinc-700 dark:text-zinc-200">{totalQty}</strong>
+            </span>
+            <span className="text-xs font-semibold text-red-500">
+              Total : {fmt(totalCost, cur)}
+            </span>
           </div>
         )}
       </div>
@@ -223,7 +281,12 @@ export function SupplierDetailPage() {
           <Input label="Notes" value={eNotes} onChange={e => setENotes(e.target.value)} />
           <div className="flex gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowEdit(false)} className="flex-1">Annuler</Button>
-            <Button onClick={() => updateMutation.mutate({ name: eName, email: eEmail || null, phone: ePhone || null, address: eAddress || null, notes: eNotes || null })} className="flex-1" loading={updateMutation.isPending} disabled={!eName.trim()}>
+            <Button
+              onClick={() => updateMutation.mutate({ name: eName, email: eEmail || null, phone: ePhone || null, address: eAddress || null, notes: eNotes || null })}
+              className="flex-1"
+              loading={updateMutation.isPending}
+              disabled={!eName.trim()}
+            >
               Enregistrer
             </Button>
           </div>

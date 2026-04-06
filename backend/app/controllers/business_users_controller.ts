@@ -1,6 +1,6 @@
 import BusinessUser from '#models/business_user'
 import User from '#models/user'
-import { verifyBusinessAccess, getUserOrganizationId, isOrgAdmin, isSuperAdmin } from '#services/authorization'
+import { verifyBusinessAccess, isSuperAdmin, getUserBusinessIds, isBusinessAdmin } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
 
@@ -36,14 +36,6 @@ export default class BusinessUsersController {
     const data = await ctx.request.validateUsing(addUserValidator)
     await verifyBusinessAccess(ctx, data.businessId, ['admin'])
 
-    // Verify the target user belongs to the same organization
-    const authUser = ctx.auth.getUserOrFail()
-    const orgId = await getUserOrganizationId(authUser.id)
-    const targetUser = await User.findOrFail(data.userId)
-    if (orgId && targetUser.organizationId !== orgId) {
-      return ctx.response.forbidden({ error: 'User does not belong to your organization' })
-    }
-
     const businessUser = await BusinessUser.create({
       businessId: data.businessId,
       userId: data.userId,
@@ -56,18 +48,30 @@ export default class BusinessUsersController {
   }
 
   /**
-   * List users scoped to the current user's organization only.
+   * List users visible to the requesting user.
    * Superadmin sees all users.
+   * Others see users in the same businesses they belong to.
    */
   async users(ctx: HttpContext) {
     const authUser = ctx.auth.getUserOrFail()
+
     if (await isSuperAdmin(authUser.id)) {
       return await User.query().orderBy('fullName', 'asc')
     }
-    const orgId = await getUserOrganizationId(authUser.id)
-    if (!orgId) return []
+
+    // Return users in the same businesses as the requesting user
+    const businessIds = await getUserBusinessIds(authUser.id)
+    if (!businessIds.length) return []
+
+    const businessUsers = await BusinessUser.query()
+      .whereIn('businessId', businessIds)
+      .where('isActive', true)
+
+    const userIds = [...new Set(businessUsers.map((bu) => bu.userId))]
+    if (!userIds.length) return []
+
     return await User.query()
-      .where('organizationId', orgId)
+      .whereIn('id', userIds)
       .orderBy('fullName', 'asc')
   }
 
@@ -92,24 +96,16 @@ export default class BusinessUsersController {
   }
 
   /**
-   * Create a new user account and assign to the current organization.
-   * Only admins can create users. Superadmin can create users in any org
-   * by passing organization_id in the request body.
+   * Create a new user account.
+   * Superadmin can always create users.
+   * Business admins can create users.
    */
   async createUser(ctx: HttpContext) {
     const authUser = ctx.auth.getUserOrFail()
     const superAdmin = await isSuperAdmin(authUser.id)
 
-    let orgId: number | null = null
-
-    if (superAdmin) {
-      orgId = ctx.request.input('organizationId') || null
-    } else {
-      orgId = await getUserOrganizationId(authUser.id)
-      if (!orgId) {
-        return ctx.response.forbidden({ error: 'You must belong to an organization to create users' })
-      }
-      const admin = await isOrgAdmin(authUser.id, orgId)
+    if (!superAdmin) {
+      const admin = await isBusinessAdmin(authUser.id)
       if (!admin) {
         return ctx.response.forbidden({ error: 'Only admins can create new users' })
       }
@@ -120,7 +116,6 @@ export default class BusinessUsersController {
       fullName: data.fullName,
       email: data.email,
       password: data.password,
-      organizationId: orgId,
     })
 
     // Send welcome email if requested
@@ -142,9 +137,7 @@ export default class BusinessUsersController {
                   <p style="margin: 4px 0;"><strong>Password:</strong> ${data.password}</p>
                 </div>
                 <p>Please log in and change your password as soon as possible.</p>
-                <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">
-                  — The EMI Team
-                </p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— The EMI Team</p>
               </div>
             `)
         })

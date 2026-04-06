@@ -5,7 +5,7 @@ import { useAuthStore, useAppStore } from '../stores'
 import { Icon } from '../components/ui/Icon'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import api from '../services/api'
-import type { Business, Organization } from '../types'
+import type { Business } from '../types'
 
 export function AppLayout() {
   const { user, logout, setUser } = useAuthStore()
@@ -30,20 +30,10 @@ export function AppLayout() {
     return user?.businessRoles && Object.keys(user.businessRoles).length > 0
   }, [user, isSuperAdmin])
 
-  const { data: orgs } = useQuery<Organization[]>({
-    queryKey: ['organizations'],
-    queryFn: async () => (await api.get('/organizations')).data,
-    enabled: !!hasBusinessAccess && !isSuperAdmin,
-  })
-  const orgId = orgs?.[0]?.id
-
   const { data: businesses } = useQuery<Business[]>({
-    queryKey: ['businesses', isSuperAdmin ? 'all' : orgId],
-    queryFn: async () =>
-      isSuperAdmin
-        ? (await api.get('/businesses')).data
-        : (await api.get('/businesses', { params: { organization_id: orgId } })).data,
-    enabled: isSuperAdmin ? true : !!orgId && !!hasBusinessAccess,
+    queryKey: ['businesses'],
+    queryFn: async () => (await api.get('/businesses')).data,
+    enabled: !!hasBusinessAccess,
   })
 
   useEffect(() => {
@@ -106,14 +96,18 @@ export function AppLayout() {
 
   const financeNav = useMemo(() => {
     const items = [
-      { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down', roles: ['admin','manager'] },
-      { to: '/unpaid-bills', label: 'Impayés',      icon: 'debt',          roles: ['admin','manager','cashier'] },
-      { to: '/rotations',    label: 'Rotations',    icon: 'rotations',     roles: ['admin','manager'] },
-      { to: '/reports',      label: 'Rapports',     icon: 'reports',       roles: ['admin','manager'] },
+      { to: '/transactions', label: 'Transactions', icon: 'arrow-up-down', roles: ['admin','manager'], requireRotations: false },
+      { to: '/unpaid-bills', label: 'Impayés',      icon: 'debt',          roles: ['admin','manager','cashier'], requireRotations: false },
+      { to: '/rotations',    label: 'Rotations',    icon: 'rotations',     roles: ['admin','manager'], requireRotations: true },
+      { to: '/reports',      label: 'Rapports',     icon: 'reports',       roles: ['admin','manager'], requireRotations: false },
     ]
     if (!currentRole) return []
-    return items.filter((i) => i.roles.includes(currentRole))
-  }, [currentRole])
+    return items.filter((i) => {
+      if (!i.roles.includes(currentRole)) return false
+      if (i.requireRotations && currentBusiness?.type !== 'rotation') return false
+      return true
+    })
+  }, [currentRole, currentBusiness])
 
   const settingsNav = useMemo(() => {
     const items = [

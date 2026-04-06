@@ -6,7 +6,6 @@ import { type AccessToken, DbAccessTokensProvider } from '@adonisjs/auth/access_
 import { column, belongsTo, hasMany } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
-import Organization from '#models/organization'
 import Role from '#models/role'
 import BusinessUser from '#models/business_user'
 
@@ -15,10 +14,10 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   declare currentAccessToken?: AccessToken
 
   @column()
-  declare organizationId: number | null
+  declare roleId: number | null
 
   @column()
-  declare roleId: number | null
+  declare phone: string | null
 
   @column()
   declare pendingEmail: string | null
@@ -28,9 +27,6 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
 
   @column.dateTime()
   declare emailOtpExpiresAt: DateTime | null
-
-  @belongsTo(() => Organization)
-  declare organization: BelongsTo<typeof Organization>
 
   @belongsTo(() => Role)
   declare role: BelongsTo<typeof Role>

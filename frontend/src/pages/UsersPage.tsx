@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -37,11 +37,12 @@ export function UsersPage() {
   const { user: me } = useAuthStore()
   const bid = currentBusiness?.id
   const queryClient = useQueryClient()
+  const isSuperAdmin = me?.role === 'superadmin'
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
-  const [prefilledUserId, setPrefilledUserId] = useState<string>('')
+  const [_prefilledUserId, setPrefilledUserId] = useState<string>('')
 
   // Assign form
   const [assignUserId, setAssignUserId] = useState('')
@@ -59,7 +60,28 @@ export function UsersPage() {
   const [sendEmail, setSendEmail]     = useState(true)
   const [createError, setCreateError] = useState('')
 
-  // All users in the system (or org-scoped for non-superadmins)
+  // Admin edit user modal
+  const [editUser, setEditUser] = useState<User | null>(null)
+  const [editFullName, setEditFullName]   = useState('')
+  const [editEmail, setEditEmail]         = useState('')
+  const [editPhone, setEditPhone]         = useState('')
+  const [editPassword, setEditPassword]   = useState('')
+  const [editError, setEditError]         = useState('')
+  const [showEditPassword, setShowEditPassword] = useState(false)
+
+  // Sync edit form when user changes
+  useEffect(() => {
+    if (editUser) {
+      setEditFullName(editUser.fullName ?? '')
+      setEditEmail(editUser.email)
+      setEditPhone(editUser.phone ?? '')
+      setEditPassword('')
+      setEditError('')
+      setShowEditPassword(false)
+    }
+  }, [editUser])
+
+  // All users in the system
   const { data: allUsers = [], isLoading: loadingUsers } = useQuery<User[]>({
     queryKey: ['all-users'],
     queryFn: async () => (await api.get('/business-users/users')).data,
@@ -127,6 +149,20 @@ export function UsersPage() {
     },
   })
 
+  const adminEditMutation = useMutation({
+    mutationFn: ({ id, ...payload }: Record<string, unknown>) =>
+      api.put(`/admin/users/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-users'] })
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      setEditUser(null)
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { errors?: { message: string }[]; message?: string } } }
+      setEditError(e.response?.data?.message || e.response?.data?.errors?.[0]?.message || 'Échec de la mise à jour.')
+    },
+  })
+
   // ------ Handlers ------
   const openAssignFor = (userId: number) => {
     setPrefilledUserId(String(userId))
@@ -146,8 +182,19 @@ export function UsersPage() {
     setCreateError('')
     createUserMutation.mutate({
       fullName: newFullName, email: newEmail, password: newPassword, sendEmail,
-      ...(me?.role === 'superadmin' && currentBusiness?.organizationId ? { organizationId: currentBusiness.organizationId } : {}),
     } as Parameters<typeof createUserMutation.mutate>[0])
+  }
+
+  const handleAdminEdit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!editUser) return
+    setEditError('')
+    const payload: Record<string, unknown> = { id: editUser.id }
+    if (editFullName.trim()) payload.fullName = editFullName.trim()
+    if (editEmail.trim()) payload.email = editEmail.trim()
+    payload.phone = editPhone.trim() || ''
+    if (editPassword) payload.password = editPassword
+    adminEditMutation.mutate(payload)
   }
 
   if (!bid) return (
@@ -203,13 +250,16 @@ export function UsersPage() {
               const roleLabel = bu.role?.displayName || bu.role?.name || `Rôle #${bu.roleId}`
               const colorClass = ROLE_COLORS[roleName] ?? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
               return (
-                <div key={u.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                <div key={u.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group">
                   <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColor(u.id)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
                     {getInitials(u.fullName, u.email)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{u.fullName || u.email}</p>
-                    <p className="text-xs text-zinc-400 truncate">{u.email}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs text-zinc-400 truncate">{u.email}</p>
+                      {u.phone && <p className="text-xs text-zinc-400">{u.phone}</p>}
+                    </div>
                   </div>
 
                   {/* Role (editable inline) */}
@@ -238,12 +288,23 @@ export function UsersPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => setEditUser(u)}
+                        title="Modifier le profil"
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-emi-violet hover:bg-emi-violet/10 transition-colors"
+                      >
+                        <Icon name="edit" size={14} />
+                      </button>
+                    )}
                     <button
                       onClick={() => { setEditingId(bu.id); setEditRoleId(String(bu.roleId)) }}
                       title="Changer le rôle"
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-emi-violet hover:bg-emi-violet/10 transition-colors"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
                     >
-                      <Icon name="edit" size={14} />
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
                     </button>
                     <button
                       onClick={() => { if (window.confirm('Retirer cet utilisateur du business ?')) deleteMutation.mutate(bu.id) }}
@@ -274,22 +335,101 @@ export function UsersPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 truncate">{u.fullName || u.email}</p>
-                  <p className="text-xs text-zinc-400 truncate">{u.email}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs text-zinc-400 truncate">{u.email}</p>
+                    {u.phone && <p className="text-xs text-zinc-400">{u.phone}</p>}
+                  </div>
                 </div>
                 <span className="shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-400">
                   Non membre
                 </span>
-                <button
-                  onClick={() => openAssignFor(u.id)}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emi-violet/10 text-emi-violet hover:bg-emi-violet/20 transition-colors"
-                >
-                  <Icon name="plus" size={12} /> Assigner
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => setEditUser(u)}
+                      title="Modifier le profil"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-emi-violet hover:bg-emi-violet/10 transition-colors"
+                    >
+                      <Icon name="edit" size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openAssignFor(u.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emi-violet/10 text-emi-violet hover:bg-emi-violet/20 transition-colors"
+                  >
+                    <Icon name="plus" size={12} /> Assigner
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      {/* Admin: Edit user modal */}
+      <Modal
+        isOpen={!!editUser}
+        onClose={() => setEditUser(null)}
+        title={`Modifier — ${editUser?.fullName || editUser?.email || ''}`}
+      >
+        <form onSubmit={handleAdminEdit} className="space-y-3">
+          {editError && (
+            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
+              {editError}
+            </div>
+          )}
+          <Input
+            label="Nom complet"
+            value={editFullName}
+            onChange={e => setEditFullName(e.target.value)}
+            placeholder="Jean Dupont"
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={editEmail}
+            onChange={e => setEditEmail(e.target.value)}
+            placeholder="user@exemple.com"
+          />
+          <Input
+            label="Téléphone"
+            value={editPhone}
+            onChange={e => setEditPhone(e.target.value)}
+            placeholder="+XXX XX XX XX XX"
+          />
+          {/* Password with show/hide toggle */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+              Nouveau mot de passe <span className="font-normal text-zinc-400">(laisser vide pour ne pas changer)</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showEditPassword ? 'text' : 'password'}
+                value={editPassword}
+                onChange={e => setEditPassword(e.target.value)}
+                placeholder="Min. 8 caractères"
+                autoComplete="new-password"
+                className="w-full pr-10 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-2 focus:ring-emi-violet/20 transition"
+              />
+              <button
+                type="button"
+                onClick={() => setShowEditPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              >
+                <Icon name={showEditPassword ? 'eye-off' : 'eye'} size={15} />
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setEditUser(null)} className="flex-1">
+              Annuler
+            </Button>
+            <Button type="submit" className="flex-1" loading={adminEditMutation.isPending}>
+              Enregistrer
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Create user modal */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Créer un utilisateur">

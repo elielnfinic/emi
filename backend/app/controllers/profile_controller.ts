@@ -6,10 +6,21 @@ import vine from '@vinejs/vine'
 import { DateTime } from 'luxon'
 import type { HttpContext } from '@adonisjs/core/http'
 
+/**
+ * Hash a password explicitly.
+ * We do NOT rely on the model's beforeSave hook for admin updates because the
+ * hook is registered on the withAuthFinder mixin intermediate class, and
+ * compose() can cause the merged $hooks instance on User to not include it.
+ * Direct hashing here is always correct and idempotent.
+ */
+async function hashPassword(plain: string): Promise<string> {
+  return hash.make(plain)
+}
+
 export default class ProfileController {
   async show({ auth, serialize }: HttpContext) {
-    const user = auth.getUserOrFail()
-    await user.load('role')
+    const authUser = auth.getUserOrFail()
+    const user = await User.query().where('id', authUser.id).preload('role').firstOrFail()
 
     const businessUsersData = await BusinessUser.query()
       .where('userId', user.id)
@@ -22,7 +33,7 @@ export default class ProfileController {
     }
 
     return serialize({
-      ...UserTransformer.transform(user).toObject(),
+      ...new UserTransformer(user).toObject(),
       role: user.role?.name ?? null,
       businessRoles: roles,
     })
@@ -130,8 +141,8 @@ export default class ProfileController {
   }
 
   async adminUpdateUser({ auth, params, request, response }: HttpContext) {
-    const currentUser = auth.getUserOrFail()
-    await currentUser.load('role')
+    const authUser = auth.getUserOrFail()
+    const currentUser = await User.query().where('id', authUser.id).preload('role').firstOrFail()
     if (currentUser.role?.name !== 'superadmin') {
       return response.forbidden({ message: 'Accès non autorisé' })
     }
@@ -140,6 +151,7 @@ export default class ProfileController {
     const validator = vine.create({
       fullName: vine.string().minLength(2).maxLength(100).optional(),
       email: vine.string().email().maxLength(254).optional(),
+      phone: vine.string().maxLength(30).optional(),
       password: vine.string().minLength(8).maxLength(32).optional(),
     })
     const data = await request.validateUsing(validator)
@@ -156,12 +168,23 @@ export default class ProfileController {
     }
 
     if (data.fullName !== undefined) target.fullName = data.fullName
-    if (data.password) target.password = data.password
+    if (data.phone !== undefined) target.phone = data.phone || null
 
+    // Save non-password fields through the model
     await target.save()
+
+    // Handle password separately with an explicit hash to guarantee correctness.
+    // We avoid setting it on the Lucid model instance because the beforeSave hook
+    // is registered on the withAuthFinder mixin class, and compose() can cause the
+    // hook to be missing from User.$hooks — leading to plaintext being stored.
+    if (data.password) {
+      const hashed = await hashPassword(data.password)
+      await User.query().where('id', target.id).update({ password: hashed })
+    }
+
     return response.ok({
       message: 'Utilisateur mis à jour',
-      user: { id: target.id, fullName: target.fullName, email: target.email },
+      user: { id: target.id, fullName: target.fullName, email: target.email, phone: target.phone },
     })
   }
 }

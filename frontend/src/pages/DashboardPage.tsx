@@ -184,7 +184,7 @@ export function DashboardPage() {
     actions.push({
       key: 'new-sale', label: 'Nouvelle vente', desc: 'Comptant ou à crédit',
       icon: 'sales', bg: 'bg-emerald-50 dark:bg-emerald-950/30', fg: 'text-emerald-600',
-      href: '/sales',
+      href: '/sales?action=new-sale',
     })
     actions.push({
       key: 'pay-debt', label: 'Enregistrer un paiement', desc: 'Solder une dette client',
@@ -197,7 +197,7 @@ export function DashboardPage() {
     actions.push({
       key: 'stock-in', label: 'Arrivage de stock', desc: 'Enregistrer du stock entrant',
       icon: 'stock', bg: 'bg-blue-50 dark:bg-blue-950/30', fg: 'text-blue-500',
-      href: '/stock',
+      href: '/stock?action=stock-in',
     })
   }
 
@@ -205,12 +205,12 @@ export function DashboardPage() {
     actions.push({
       key: 'income', label: "Entrée d'argent", desc: 'Revenu, encaissement…',
       icon: 'arrow-up', bg: 'bg-emerald-50 dark:bg-emerald-950/30', fg: 'text-emerald-600',
-      href: '/transactions',
+      href: '/transactions?action=income',
     })
     actions.push({
       key: 'expense', label: 'Nouvelle dépense', desc: 'Frais, achats, charges…',
       icon: 'arrow-down', bg: 'bg-red-50 dark:bg-red-950/30', fg: 'text-red-500',
-      href: '/transactions',
+      href: '/transactions?action=expense',
     })
     actions.push({
       key: 'reports', label: 'Rapports', desc: 'Analyses & statistiques',

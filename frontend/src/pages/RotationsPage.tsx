@@ -33,6 +33,7 @@ export function RotationsPage() {
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
   const [initialCapital, setInitialCapital] = useState('')
   const [notes, setNotes] = useState('')
+  const [formError, setFormError] = useState('')
 
   const { data, isLoading } = useQuery<Rotation[]>({
     queryKey: ['rotations', bid],
@@ -45,7 +46,12 @@ export function RotationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rotations', bid] })
       resetForm()
+      setFormError('')
       setShowModal(false)
+    },
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { error?: string } } }
+      setFormError(e.response?.data?.error ?? 'Une erreur est survenue.')
     },
   })
 
@@ -54,8 +60,9 @@ export function RotationsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rotations', bid] }),
   })
 
-  const resetForm = () => {
-    setName(''); setStartDate(new Date().toISOString().split('T')[0])
+  const resetForm = (nextNumber?: number) => {
+    setName(nextNumber !== undefined ? `Rotation-${nextNumber}` : '')
+    setStartDate(new Date().toISOString().split('T')[0])
     setInitialCapital(''); setNotes('')
   }
 
@@ -95,7 +102,12 @@ export function RotationsPage() {
             {currentBusiness?.name} · {rotations.length} rotation{rotations.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setShowModal(true) }}>
+        <Button
+          size="sm"
+          onClick={() => { resetForm(rotations.length + 1); setFormError(''); setShowModal(true) }}
+          disabled={active.length > 0}
+          title={active.length > 0 ? 'Clôturez la rotation en cours avant d\'en créer une nouvelle' : undefined}
+        >
           <Icon name="plus" size={15} className="mr-1" /> Nouvelle rotation
         </Button>
       </div>
@@ -201,21 +213,27 @@ export function RotationsPage() {
           <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
             Une rotation représente un cycle complet : investissement → achats → ventes → bénéfice.
           </p>
-          <button onClick={() => { resetForm(); setShowModal(true) }} className="mt-3 text-sm text-emi-violet hover:underline">
+          <button onClick={() => { resetForm(1); setShowModal(true) }} className="mt-3 text-sm text-emi-violet hover:underline">
             + Démarrer une rotation
           </button>
         </div>
       )}
 
       {/* Create Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nouvelle rotation">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setFormError('') }} title="Nouvelle rotation">
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input label="Nom *" value={name} onChange={e => setName(e.target.value)} required placeholder="Rotation Janvier 2025" />
           <Input label="Date de début" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
           <Input label="Capital initial" type="number" step="0.01" value={initialCapital} onChange={e => setInitialCapital(e.target.value)} placeholder="0.00" />
           <Input label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optionnel" />
+          {formError && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 rounded-xl text-sm text-red-600 dark:text-red-400">
+              <svg className="shrink-0 mt-0.5" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+              {formError}
+            </div>
+          )}
           <div className="flex gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Annuler</Button>
+            <Button type="button" variant="secondary" onClick={() => { setShowModal(false); setFormError('') }} className="flex-1">Annuler</Button>
             <Button type="submit" className="flex-1" loading={createMutation.isPending}>Démarrer</Button>
           </div>
         </form>

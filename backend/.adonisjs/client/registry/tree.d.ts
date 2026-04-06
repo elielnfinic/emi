@@ -14,17 +14,15 @@ export interface ApiDefinition {
   profile: {
     profile: {
       show: typeof routes['profile.profile.show']
+      updateProfile: typeof routes['profile.profile.update_profile']
+      updatePassword: typeof routes['profile.profile.update_password']
+      requestEmailChange: typeof routes['profile.profile.request_email_change']
+      verifyEmailChange: typeof routes['profile.profile.verify_email_change']
     }
+    adminUpdateUser: typeof routes['profile.admin_update_user']
   }
   dashboard: {
     show: typeof routes['dashboard.show']
-  }
-  organizations: {
-    index: typeof routes['organizations.index']
-    store: typeof routes['organizations.store']
-    show: typeof routes['organizations.show']
-    update: typeof routes['organizations.update']
-    destroy: typeof routes['organizations.destroy']
   }
   businesses: {
     index: typeof routes['businesses.index']
@@ -34,6 +32,7 @@ export interface ApiDefinition {
     destroy: typeof routes['businesses.destroy']
   }
   transactions: {
+    beneficiaries: typeof routes['transactions.beneficiaries']
     index: typeof routes['transactions.index']
     store: typeof routes['transactions.store']
     show: typeof routes['transactions.show']

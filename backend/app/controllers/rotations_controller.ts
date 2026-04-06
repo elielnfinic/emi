@@ -33,6 +33,18 @@ export default class RotationsController {
   async store(ctx: HttpContext) {
     const data = await ctx.request.validateUsing(createRotationValidator)
     await verifyBusinessAccess(ctx, data.businessId, ['admin', 'manager'])
+
+    const activeRotation = await Rotation.query()
+      .where('businessId', data.businessId)
+      .where('status', 'active')
+      .first()
+
+    if (activeRotation) {
+      return ctx.response.conflict({
+        error: `Une rotation est déjà en cours ("${activeRotation.name}"). Clôturez-la avant d'en créer une nouvelle.`,
+      })
+    }
+
     const rotation = await Rotation.create({
       businessId: data.businessId,
       name: data.name,

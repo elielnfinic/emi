@@ -2,9 +2,10 @@ interface BadgeProps {
   variant?: 'success' | 'warning' | 'danger' | 'info' | 'default' | 'violet'
   children: string
   dot?: boolean
+  className?: string
 }
 
-export function Badge({ variant = 'default', children, dot = false }: BadgeProps) {
+export function Badge({ variant = 'default', children, dot = false, className }: BadgeProps) {
   const variants = {
     success: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400',
     warning: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400',
@@ -22,7 +23,7 @@ export function Badge({ variant = 'default', children, dot = false }: BadgeProps
     default: 'bg-zinc-400',
   }
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${variants[variant]}${className ? ` ${className}` : ''}`}>
       {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dots[variant]}`} />}
       {children}
     </span>

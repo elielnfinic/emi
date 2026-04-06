@@ -1,5 +1,4 @@
 import BusinessUser from '#models/business_user'
-import Business from '#models/business'
 import type { HttpContext } from '@adonisjs/core/http'
 
 /**
@@ -13,8 +12,6 @@ export async function isSuperAdmin(userId: number): Promise<boolean> {
 
 /**
  * Get the user's role name in a specific business.
- * Looks up the role name from the roles table to avoid hardcoded ID assumptions.
- * Returns null if user is not assigned to the business.
  */
 export async function getUserRoleInBusiness(
   userId: number,
@@ -28,21 +25,6 @@ export async function getUserRoleInBusiness(
     .first()
   if (!bu) return null
   return bu.role?.name ?? null
-}
-
-/**
- * Check if the user is an org-level admin (admin in at least one business of the org).
- */
-export async function isOrgAdmin(userId: number, organizationId: number): Promise<boolean> {
-  const adminBu = await BusinessUser.query()
-    .where('userId', userId)
-    .where('isActive', true)
-    .whereHas('business', (q) => {
-      q.where('organizationId', organizationId)
-    })
-    .preload('role')
-    .first()
-  return adminBu?.role?.name === 'admin'
 }
 
 /**
@@ -86,60 +68,7 @@ export async function verifyBusinessAccess(
 }
 
 /**
- * Verify the authenticated user belongs to the given organization.
- */
-export async function verifyOrgAccess(
-  ctx: HttpContext,
-  organizationId: number
-): Promise<void> {
-  const user = ctx.auth.getUserOrFail()
-
-  // Superadmin has access to all organizations
-  if (await isSuperAdmin(user.id)) return
-
-  // If the user has organizationId set, check it matches
-  if (user.organizationId && user.organizationId === organizationId) {
-    return
-  }
-
-  // Also check if user has any business assignment in this org
-  const bu = await BusinessUser.query()
-    .where('userId', user.id)
-    .where('isActive', true)
-    .whereHas('business', (q) => {
-      q.where('organizationId', organizationId)
-    })
-    .first()
-
-  if (!bu) {
-    return ctx.response.forbidden({
-      error: 'You do not have access to this organization',
-    }) as never
-  }
-}
-
-/**
- * Get the organization ID for the authenticated user.
- * Checks user.organizationId first, then falls back to their business assignments.
- */
-export async function getUserOrganizationId(userId: number): Promise<number | null> {
-  // First check direct assignment
-  const { default: User } = await import('#models/user')
-  const user = await User.find(userId)
-  if (user?.organizationId) return user.organizationId
-
-  // Fall back to business assignment
-  const bu = await BusinessUser.query()
-    .where('userId', userId)
-    .where('isActive', true)
-    .preload('business')
-    .first()
-
-  return bu?.business?.organizationId ?? null
-}
-
-/**
- * Get all business IDs the user has access to (ones they are assigned to).
+ * Get all business IDs the user has access to.
  */
 export async function getUserBusinessIds(userId: number): Promise<number[]> {
   const businessUsers = await BusinessUser.query()
@@ -149,8 +78,19 @@ export async function getUserBusinessIds(userId: number): Promise<number[]> {
 }
 
 /**
+ * Check if user is admin in any of their businesses.
+ */
+export async function isBusinessAdmin(userId: number): Promise<boolean> {
+  const bu = await BusinessUser.query()
+    .where('userId', userId)
+    .where('isActive', true)
+    .preload('role')
+    .first()
+  return bu?.role?.name === 'admin'
+}
+
+/**
  * Verify a resource's businessId matches one the user has access to.
- * Used for show/update/destroy of resources that have a businessId field.
  */
 export async function verifyResourceAccess(
   ctx: HttpContext,
