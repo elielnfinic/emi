@@ -194,6 +194,7 @@ function ProductSearch({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  const hasAnyInStock = stockItems.some(s => s.quantity > 0)
   const filtered = q.length > 0
     ? stockItems.filter(s => s.name.toLowerCase().includes(q.toLowerCase()) && s.quantity > 0).slice(0, 6)
     : stockItems.filter(s => s.quantity > 0).slice(0, 6)
@@ -208,11 +209,17 @@ function ProductSearch({
           value={q}
           onChange={(e) => { setQ(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder="Rechercher un produit…"
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all"
+          placeholder={hasAnyInStock ? 'Rechercher un produit…' : 'Aucun produit en stock…'}
+          disabled={!hasAnyInStock}
+          className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emi-violet/30 focus:border-emi-violet transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
-      {open && filtered.length > 0 && (
+      {open && hasAnyInStock && filtered.length === 0 && q.length > 0 && (
+        <div className="absolute z-30 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl px-4 py-3">
+          <p className="text-sm text-zinc-400">Aucun résultat pour « {q} »</p>
+        </div>
+      )}
+      {open && hasAnyInStock && filtered.length > 0 && (
         <div className="absolute z-30 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl overflow-hidden">
           {filtered.map((s) => (
             <button
@@ -653,7 +660,20 @@ export function SalesPage() {
                 <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Produits</p>
               </div>
               <ProductSearch bid={bid} cur={cur} stockItems={stockItems} onAdd={addToCart} />
-              {stockItems.filter(s => s.quantity > 0).slice(0, 5).length > 0 && (
+              {stockItems.filter(s => s.quantity > 0).length === 0 ? (
+                <div className="mt-3 flex items-start gap-3 p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                  <svg className="shrink-0 mt-0.5 text-amber-500" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Aucun produit en stock</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                      Vous ne pouvez pas sélectionner de produits car votre inventaire est vide ou épuisé.{' '}
+                      <a href="/stock" className="underline font-medium hover:text-amber-800 dark:hover:text-amber-200 transition-colors">
+                        Ajouter des produits →
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              ) : (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {stockItems.filter(s => s.quantity > 0).slice(0, 5).map(s => (
                     <button
