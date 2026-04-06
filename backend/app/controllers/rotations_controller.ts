@@ -1,4 +1,6 @@
 import Rotation from '#models/rotation'
+import Transaction from '#models/transaction'
+import Sale from '#models/sale'
 import { verifyBusinessAccess } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 import vine from '@vinejs/vine'
@@ -60,11 +62,43 @@ export default class RotationsController {
     const rotation = await Rotation.query()
       .where('id', ctx.params.id)
       .preload('business')
-      .preload('transactions')
-      .preload('sales')
       .firstOrFail()
     await verifyBusinessAccess(ctx, rotation.businessId)
-    return rotation
+
+    // Use the rotation's date range to collect all operations automatically.
+    // No need to manually stamp each transaction/sale with a rotationId.
+    const startStr = rotation.startDate.toFormat('yyyy-MM-dd')
+    const endStr = (rotation.endDate ?? DateTime.now()).toFormat('yyyy-MM-dd')
+
+    // Fetch all transactions in the period, excluding auto-generated income
+    // entries that mirror sale totals (description starts with 'sale:') to
+    // avoid double-counting when computing revenue.
+    const transactions = await Transaction.query()
+      .where('businessId', rotation.businessId)
+      .where('date', '>=', startStr)
+      .where('date', '<=', endStr)
+      .where((q) => {
+        q.whereNull('description').orWhere('description', 'not like', 'sale:%')
+      })
+      .orderBy('date', 'desc')
+      .orderBy('createdAt', 'desc')
+
+    // Fetch all sales in the period
+    const sales = await Sale.query()
+      .where('businessId', rotation.businessId)
+      .where('date', '>=', startStr)
+      .where('date', '<=', endStr)
+      .preload('customer')
+      .preload('items')
+      .preload('payments')
+      .orderBy('date', 'desc')
+      .orderBy('createdAt', 'desc')
+
+    return {
+      ...rotation.serialize(),
+      transactions,
+      sales,
+    }
   }
 
   async close(ctx: HttpContext) {
