@@ -76,11 +76,23 @@ const savedTheme = (localStorage.getItem('emi_theme') as Theme) || 'light'
 // Apply on init
 document.documentElement.classList.toggle('dark', savedTheme === 'dark')
 
+/** Keep <meta name="theme-color"> in sync with the active theme so the
+ *  browser chrome (iOS status bar, Android toolbar) matches the app body. */
+function applyThemeColor(theme: Theme) {
+  const color = theme === 'dark' ? '#09090B' : '#F8F8FB'
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((el) => {
+    el.content = color
+  })
+}
+// Sync on startup
+applyThemeColor(savedTheme)
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
   theme: savedTheme,
   setTheme: (theme) => {
     localStorage.setItem('emi_theme', theme)
     document.documentElement.classList.toggle('dark', theme === 'dark')
+    applyThemeColor(theme)
     set({ theme })
   },
   toggle: () => {
