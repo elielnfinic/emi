@@ -72,7 +72,10 @@ interface ThemeState {
   toggle: () => void
 }
 
-const savedTheme = (localStorage.getItem('emi_theme') as Theme) || 'light'
+const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)')
+const explicitTheme = localStorage.getItem('emi_theme') as Theme | null
+const savedTheme: Theme = explicitTheme ?? (systemPrefersDark.matches ? 'dark' : 'light')
+
 // Apply on init
 document.documentElement.classList.toggle('dark', savedTheme === 'dark')
 
@@ -100,3 +103,11 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     get().setTheme(next)
   },
 }))
+
+// Follow OS changes in real-time — only when the user hasn't set an explicit preference
+systemPrefersDark.addEventListener('change', (e) => {
+  if (localStorage.getItem('emi_theme')) return          // user has a saved choice → respect it
+  const theme: Theme = e.matches ? 'dark' : 'light'
+  useThemeStore.getState().setTheme(theme)
+  localStorage.removeItem('emi_theme')                   // keep it as "following system"
+})
