@@ -222,16 +222,15 @@ export function TransactionsPage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => api.post('/transactions', payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['transactions', bid] })
       queryClient.invalidateQueries({ queryKey: ['dashboard', bid] })
-      const saved = type as 'income' | 'expense'
-      setSuccessType(saved)
-      // Reset only amount / description / beneficiary — keep date and type for next entry
+      // Read type from the mutation variables — never stale
+      setSuccessType(variables.type as 'income' | 'expense')
+      // Reset only amount / description / beneficiary — keep date and type
       setAmount(''); setDescription(''); setBeneficiary('')
-      // Show inline banner inside the modal
       setInModalSuccess(true)
-      setTimeout(() => setInModalSuccess(false), 3000)
+      setTimeout(() => setInModalSuccess(false), 3500)
     },
   })
 
@@ -499,15 +498,6 @@ export function TransactionsPage() {
         title={type === 'income' ? '💰 Entrée d\'argent' : '💸 Enregistrer une dépense'}
       >
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* ── Success banner ── */}
-          {inModalSuccess && (
-            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in ${successType === 'income' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400'}`}>
-              <div className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${successType === 'income' ? 'bg-emerald-500' : 'bg-red-500'} text-white`}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-              </div>
-              <span>{successType === 'income' ? 'Entrée enregistrée avec succès !' : 'Dépense enregistrée avec succès !'}</span>
-            </div>
-          )}
           {/* Type toggle */}
           <div className="flex gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
             <button
@@ -529,8 +519,26 @@ export function TransactionsPage() {
           <Input label="Description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Loyer, salaire, etc." />
           <BeneficiaryAutocomplete value={beneficiary} onChange={setBeneficiary} businessId={bid} />
           <Input label="Date" type="date" value={date} onChange={e => setDate(e.target.value)} />
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Annuler</Button>
+
+          {/* ── Success banner — juste au-dessus des boutons ── */}
+          {inModalSuccess && (
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold border animate-fade-in
+              ${successType === 'income'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800'}`}>
+              <div className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 text-white ${successType === 'income' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+              <span>
+                {successType === 'income' ? 'Entrée enregistrée avec succès !' : 'Dépense enregistrée avec succès !'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="secondary" onClick={() => { setShowModal(false); resetForm() }} className="flex-1">Annuler</Button>
             <Button type="submit" className="flex-1" loading={createMutation.isPending} disabled={!amount || Number(amount) <= 0}>
               Enregistrer
             </Button>
