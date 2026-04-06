@@ -172,12 +172,32 @@ export default class SalesController {
     const sale = await Sale.findOrFail(ctx.params.id)
     await verifyBusinessAccess(ctx, sale.businessId, ['admin', 'manager'])
 
+    // Restore stock quantities for every item that was linked to a stock product
+    const items = await SaleItem.query().where('saleId', sale.id)
+    for (const item of items) {
+      if (item.stockItemId) {
+        const stockItem = await StockItem.find(item.stockItemId)
+        if (stockItem) {
+          stockItem.quantity = Number(stockItem.quantity) + Number(item.quantity)
+          await stockItem.save()
+        }
+      }
+    }
+
+    // Remove the stock-out movements that were created when this sale was recorded
+    await StockMovement.query()
+      .where('businessId', sale.businessId)
+      .where('reference', sale.reference)
+      .where('reason', 'sale')
+      .delete()
+
     // Delete the auto-created linked income transaction (if any)
     await Transaction.query()
       .where('businessId', sale.businessId)
       .where('description', `sale:${sale.reference}`)
       .delete()
 
+    // Deleting the sale cascades to sale_items and sale_payments
     await sale.delete()
     return { message: 'Sale deleted successfully' }
   }
