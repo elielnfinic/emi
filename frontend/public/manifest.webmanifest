@@ -3,6 +3,7 @@
   "short_name": "EMI",
   "description": "Gérez vos ventes, stock, clients et finances en un seul endroit.",
   "lang": "fr",
+  "id": "https://emi.souple.app/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
