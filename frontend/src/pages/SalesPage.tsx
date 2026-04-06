@@ -14,7 +14,7 @@ import type { Sale, Customer, StockItem, PaginatedResponse } from '../types'
 
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 function fmt(n: number, currency = 'USD') {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n)
 }
 function useDebounce<T>(value: T, ms: number) {
   const [d, setD] = useState(value)
