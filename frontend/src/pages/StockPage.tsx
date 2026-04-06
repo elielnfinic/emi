@@ -47,7 +47,11 @@ const AVATAR_COLORS = [
   'from-teal-500 to-emerald-600',
 ]
 function avatarColor(id: number) { return AVATAR_COLORS[id % AVATAR_COLORS.length] }
-function getInitials(name: string) { return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) }
+function getInitials(name: string) {
+  // Strip emoji and non-letter characters before extracting initials
+  const clean = name.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim()
+  return clean.split(/\s+/).filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
+}
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export function StockPage() {
