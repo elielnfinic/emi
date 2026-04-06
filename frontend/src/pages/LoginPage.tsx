@@ -34,7 +34,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emi-violet via-emi-violet-dark to-emi-dark px-4 relative overflow-hidden">
+    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-emi-violet via-emi-violet-dark to-emi-dark px-4 relative overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-1/4 -right-1/4 w-[600px] h-[600px] rounded-full bg-emi-green/10 blur-3xl" />
         <div className="absolute -bottom-1/4 -left-1/4 w-[500px] h-[500px] rounded-full bg-emi-violet/20 blur-3xl" />
