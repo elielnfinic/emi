@@ -126,20 +126,72 @@ export default class BusinessUsersController {
           message
             .from(process.env.SMTP_FROM_ADDRESS || 'noreply@emi.local')
             .to(data.email)
-            .subject('Your EMI Account Has Been Created')
-            .html(`
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #7B5CF6;">Welcome to EMI!</h2>
-                <p>Hello <strong>${data.fullName}</strong>,</p>
-                <p>An account has been created for you on EMI — Opérations Réussies.</p>
-                <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                  <p style="margin: 4px 0;"><strong>Email:</strong> ${data.email}</p>
-                  <p style="margin: 4px 0;"><strong>Password:</strong> ${data.password}</p>
-                </div>
-                <p>Please log in and change your password as soon as possible.</p>
-                <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">— The EMI Team</p>
-              </div>
-            `)
+            .subject('Votre compte EMI a été créé')
+            .html(`<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:40px 16px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+
+        <!-- Header -->
+        <tr><td style="background:#0a0a0f;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center">
+          <p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px">EMI</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#71717a;letter-spacing:2px;text-transform:uppercase">Opérations Réussies</p>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:36px 32px">
+          <h2 style="margin:0 0 8px;font-size:20px;color:#09090b">Bonjour ${data.fullName} 👋</h2>
+          <p style="margin:0 0 24px;color:#52525b;font-size:15px;line-height:1.6">
+            Un compte a été créé pour vous sur <strong>EMI</strong>. Voici vos identifiants de connexion :
+          </p>
+
+          <!-- Credentials box -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border:1px solid #e0d9ff;border-radius:10px;margin-bottom:28px">
+            <tr><td style="padding:20px 24px">
+              <p style="margin:0 0 10px;font-size:13px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:1px">Vos identifiants</p>
+              <p style="margin:0 0 8px;font-size:14px;color:#09090b">
+                <span style="color:#71717a;display:inline-block;width:90px">Email</span>
+                <strong>${data.email}</strong>
+              </p>
+              <p style="margin:0;font-size:14px;color:#09090b">
+                <span style="color:#71717a;display:inline-block;width:90px">Mot de passe</span>
+                <strong style="font-family:monospace;font-size:15px;background:#ede9fe;padding:2px 8px;border-radius:4px">${data.password}</strong>
+              </p>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.6">
+            Pour votre sécurité, connectez-vous et <strong>changez votre mot de passe</strong> dès que possible.
+          </p>
+
+          <!-- CTA Button -->
+          <table cellpadding="0" cellspacing="0" style="margin:0 auto">
+            <tr><td align="center" style="border-radius:10px;background:#7c3aed">
+              <a href="https://emi.souple.app/" target="_blank"
+                 style="display:inline-block;padding:14px 36px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;letter-spacing:0.2px">
+                Accéder à l'application →
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#f4f4f8;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center">
+          <p style="margin:0 0 4px;font-size:12px;color:#a1a1aa">
+            Vous pouvez aussi copier ce lien dans votre navigateur :
+          </p>
+          <a href="https://emi.souple.app/" style="font-size:12px;color:#7c3aed;text-decoration:none">https://emi.souple.app/</a>
+          <p style="margin:16px 0 0;font-size:11px;color:#d4d4d8">© EMI — Opérations Réussies</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`)
         })
       } catch {
         // Email sending is best-effort; don't fail user creation
