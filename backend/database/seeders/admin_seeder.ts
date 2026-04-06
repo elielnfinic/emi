@@ -30,7 +30,7 @@ export default class AdminSeeder extends BaseSeeder {
 
     await User.updateOrCreate(
       { email: 'elimek2@gmail.com' },
-      { email: 'elimek2@gmail.com', password: '12345', roleId: role.id }
+      { email: 'elimek2@gmail.com', password: '1234566', roleId: role.id }
     )
   }
 }
