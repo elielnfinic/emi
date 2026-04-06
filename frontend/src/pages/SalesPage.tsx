@@ -252,14 +252,15 @@ function CartRow({ item, index, cur, onUpdate, onRemove }: {
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           type="button"
-          onClick={() => item.quantity > 1 ? onUpdate(index, 'quantity', item.quantity - 1) : onRemove(index)}
+          onClick={() => item.quantity > 0.001 ? onUpdate(index, 'quantity', Math.max(0.001, item.quantity - 1)) : onRemove(index)}
           className="w-6 h-6 rounded-md bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 flex items-center justify-center hover:border-red-400 hover:text-red-500 transition-colors text-sm font-bold leading-none"
         >−</button>
         <input
           type="number"
-          min={1}
+          min={0.001}
+          step="any"
           value={item.quantity}
-          onChange={(e) => onUpdate(index, 'quantity', Math.max(1, Number(e.target.value)))}
+          onChange={(e) => onUpdate(index, 'quantity', Math.max(0.001, Number(e.target.value)))}
           className="w-9 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-transparent border-0 focus:outline-none"
         />
         <button
@@ -700,7 +701,7 @@ export function SalesPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <input type="number" min={0} step="0.01" value={manualPrice} onChange={e => setManualPrice(e.target.value)} placeholder="Prix unitaire *"
                       className="w-full px-3 py-2 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30" />
-                    <input type="number" min={1} value={manualQty} onChange={e => setManualQty(e.target.value)} placeholder="Quantité"
+                    <input type="number" min={0.001} step="any" value={manualQty} onChange={e => setManualQty(e.target.value)} placeholder="Quantité"
                       className="w-full px-3 py-2 rounded-lg text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emi-violet/30" />
                   </div>
                   <div className="flex gap-2">
