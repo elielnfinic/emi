@@ -23,6 +23,8 @@
 
 * {
   box-sizing: border-box;
+  /* Remove 300ms tap delay on mobile — makes every tap feel instant */
+  touch-action: manipulation;
 }
 
 body {
@@ -35,6 +37,15 @@ body {
 .dark body {
   background: #09090B;
   color: #FAFAFA;
+}
+
+/* ── Prevent iOS Safari auto-zoom on input focus ──────────────────────────── */
+/* iOS zooms whenever a focused field has font-size < 16px.                   */
+/* (hover:none)+(pointer:coarse) = touch-only devices; leaves desktop alone.  */
+@media (hover: none) and (pointer: coarse) {
+  input, input[type], select, textarea {
+    font-size: 16px;
+  }
 }
 
 /* Scrollbar */
