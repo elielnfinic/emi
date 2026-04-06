@@ -45,7 +45,7 @@ export function StatCard({ title, value, icon, color = 'violet', trend, subtitle
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50 leading-none truncate">{value}</p>
+          <p className="mt-2 text-base sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50 leading-tight break-words">{value}</p>
           {subtitle && <p className="mt-1 text-xs text-zinc-400">{subtitle}</p>}
           {trend !== undefined && (
             <div className={`mt-2 inline-flex items-center gap-1 text-xs font-medium ${trend.value >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
@@ -60,7 +60,7 @@ export function StatCard({ title, value, icon, color = 'violet', trend, subtitle
           )}
         </div>
         {icon && (
-          <div className={`shrink-0 p-2.5 rounded-xl ${iconColors[color]}`}>
+          <div className={`shrink-0 p-1.5 sm:p-2.5 rounded-xl ${iconColors[color]}`}>
             {icon}
           </div>
         )}

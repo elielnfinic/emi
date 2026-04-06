@@ -444,7 +444,11 @@ export function TransactionsPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                      {tx.description || tx.reference}
+                      {tx.description?.startsWith('stock_movement:')
+                        ? 'Achat de stock'
+                        : tx.description?.startsWith('sale:')
+                          ? 'Vente enregistrée'
+                          : tx.description || tx.reference}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-zinc-400">{tx.date}</p>
