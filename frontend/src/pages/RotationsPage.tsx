@@ -7,7 +7,6 @@ import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
 import { Modal } from '../components/ui/Modal'
-import { CloseRotationModal } from '../components/ui/CloseRotationModal'
 import { StatCard } from '../components/ui/Card'
 import { useAppStore } from '../stores'
 import api from '../services/api'
@@ -30,7 +29,6 @@ export function RotationsPage() {
   const queryClient = useQueryClient()
 
   const [showModal, setShowModal] = useState(false)
-  const [closeTarget, setCloseTarget] = useState<Rotation | null>(null)
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
   const [initialCapital, setInitialCapital] = useState('')
@@ -54,14 +52,6 @@ export function RotationsPage() {
     onError: (err: unknown) => {
       const e = err as { response?: { data?: { error?: string } } }
       setFormError(e.response?.data?.error ?? 'Une erreur est survenue.')
-    },
-  })
-
-  const closeMutation = useMutation({
-    mutationFn: (id: number) => api.post(`/rotations/${id}/close`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rotations', bid] })
-      setCloseTarget(null)
     },
   })
 
@@ -130,13 +120,20 @@ export function RotationsPage() {
           <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-2 px-1">En cours</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {active.map(r => (
-              <div key={r.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-4 flex flex-col gap-3">
+              <Link
+                key={r.id}
+                to={`/rotations/${r.id}`}
+                className="bg-white dark:bg-zinc-900 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-4 flex flex-col gap-3 hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700 transition-all group"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{r.name}</p>
                     <p className="text-xs text-zinc-400 mt-0.5">Depuis le {r.startDate}</p>
                   </div>
-                  <Badge variant="success" dot>Active</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="success" dot>Active</Badge>
+                    <Icon name="chevron-right" size={15} className="text-zinc-300 dark:text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -151,22 +148,7 @@ export function RotationsPage() {
                 </div>
 
                 {r.notes && <p className="text-xs text-zinc-400 italic">{r.notes}</p>}
-
-                <div className="flex gap-2">
-                  <Link
-                    to={`/rotations/${r.id}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold bg-emi-violet text-white hover:opacity-90 transition-opacity"
-                  >
-                    <Icon name="bar-chart" size={13} /> Explorer
-                  </Link>
-                  <button
-                    className="px-3 py-2 rounded-xl text-sm font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                    onClick={() => setCloseTarget(r)}
-                  >
-                    Clôturer
-                  </button>
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -223,16 +205,6 @@ export function RotationsPage() {
           </button>
         </div>
       )}
-
-      {/* Close Rotation Modal */}
-      <CloseRotationModal
-        isOpen={!!closeTarget}
-        onClose={() => setCloseTarget(null)}
-        onConfirm={() => closeTarget && closeMutation.mutate(closeTarget.id)}
-        loading={closeMutation.isPending}
-        rotationName={closeTarget?.name ?? ''}
-        currency={cur}
-      />
 
       {/* Create Modal */}
       <Modal isOpen={showModal} onClose={() => { setShowModal(false); setFormError('') }} title="Nouvelle rotation">
