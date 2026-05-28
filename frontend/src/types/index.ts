@@ -169,6 +169,23 @@ export interface Sale {
   updatedAt: string | null
 }
 
+export interface MonthlyBreakdown {
+  month: string
+  income: number
+  expense: number
+  profit: number
+}
+
+export interface ActiveRotationKpis {
+  rotationId: number
+  rotationName: string
+  initialCapital: number
+  totalExpense: number
+  totalRevenue: number
+  profit: number
+  roi: number | null
+}
+
 export interface DashboardData {
   kpis: {
     totalIncome: number
@@ -180,7 +197,12 @@ export interface DashboardData {
     monthSalesCount: number
     lowStockCount: number
     totalCustomers: number
+    monthIncome: number
+    monthExpense: number
+    monthProfit: number
   }
+  activeRotationKpis: ActiveRotationKpis | null
+  monthlyBreakdown: MonthlyBreakdown[]
   recentTransactions: Transaction[]
   recentSales: Sale[]
 }

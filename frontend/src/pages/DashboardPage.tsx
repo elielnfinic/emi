@@ -2,17 +2,16 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { StatCard } from '../components/ui/Card'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
-import { Button } from '../components/ui/Button'
 import { useAppStore, useAuthStore, useThemeStore } from '../stores'
 import api from '../services/api'
-import type { DashboardData, Transaction, Rotation, Sale, PaginatedResponse } from '../types'
+import type { DashboardData, MonthlyBreakdown, Rotation, Sale, PaginatedResponse } from '../types'
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -30,36 +29,33 @@ function daysBetween(a: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(a).getTime()) / 86_400_000))
 }
 
-function buildChartData(transactions: Transaction[]) {
-  const byDate: Record<string, { income: number; expense: number }> = {}
-  for (const tx of transactions) {
-    const d = tx.date?.slice(0, 10) ?? 'N/A'
-    if (!byDate[d]) byDate[d] = { income: 0, expense: 0 }
-    if (tx.type === 'income') byDate[d].income += Number(tx.amount)
-    else byDate[d].expense += Number(tx.amount)
-  }
-  return Object.entries(byDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, v]) => ({
-      date: new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
-      Revenus: v.income,
-      Dépenses: v.expense,
-    }))
+/** Build chart data from the 6-month backend breakdown */
+function buildMonthlyChartData(breakdown: MonthlyBreakdown[]) {
+  return breakdown.map((b) => ({
+    month: new Date(b.month + '-02').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+    Revenus: b.income,
+    Dépenses: b.expense,
+    Bénéfice: b.profit,
+  }))
 }
 
 const CustomTooltip = ({ active, payload, label, currency }: {
-  active?: boolean; payload?: { color: string; name: string; value: number }[]
-  label?: string; currency: string
+  active?: boolean
+  payload?: { color: string; name: string; value: number }[]
+  label?: string
+  currency: string
 }) => {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 shadow-xl text-xs">
       <p className="font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{label}</p>
-      {payload.map(p => (
+      {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 mb-1">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span className="text-zinc-500">{p.name}:</span>
-          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{fmt(p.value, currency)}</span>
+          <span className={`font-semibold ${p.name === 'Bénéfice' ? (p.value >= 0 ? 'text-emerald-600' : 'text-red-500') : 'text-zinc-800 dark:text-zinc-200'}`}>
+            {p.name === 'Bénéfice' && p.value >= 0 ? '+' : ''}{fmt(p.value, currency)}
+          </span>
         </div>
       ))}
     </div>
@@ -95,6 +91,56 @@ function ActionList({ actions }: { actions: ActionDef[] }) {
           <Icon name="chevron-right" size={13} className="text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
         </Link>
       ))}
+    </div>
+  )
+}
+
+/* ─── Monthly P&L summary bar ───────────────────────────────────── */
+
+function MonthPnlBar({ income, expense, profit, currency }: {
+  income: number; expense: number; profit: number; currency: string
+}) {
+  const isPositive = profit >= 0
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+        <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+          Ce mois-ci
+        </p>
+        <p className="text-xs text-zinc-400">
+          {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+        </p>
+      </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 divide-x divide-zinc-100 dark:divide-zinc-800">
+        {/* Income */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <p className="text-xs text-zinc-400">Revenus</p>
+          </div>
+          <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{fmt(income, currency)}</p>
+        </div>
+        {/* Expense */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="w-2 h-2 rounded-full bg-red-500" />
+            <p className="text-xs text-zinc-400">Dépenses</p>
+          </div>
+          <p className="text-lg font-bold text-red-500">−{fmt(expense, currency)}</p>
+        </div>
+        {/* Profit */}
+        <div className={`px-5 py-4 ${isPositive ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-red-50 dark:bg-red-950/20'}`}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            <p className="text-xs text-zinc-400">Bénéfice net</p>
+          </div>
+          <p className={`text-lg font-bold ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>
+            {isPositive ? '+' : ''}{fmt(profit, currency)}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -140,7 +186,7 @@ export function DashboardPage() {
     queryFn: async () => (await api.get('/rotations', { params: { business_id: businessId } })).data,
     enabled: !!businessId && supportsRotations,
   })
-  const activeRotation = rotations?.find(r => r.status === 'active') ?? null
+  const activeRotation = rotations?.find((r) => r.status === 'active') ?? null
 
   const { data: unpaidPage } = useQuery<PaginatedResponse<Sale>>({
     queryKey: ['sales', businessId, 'dashboard-unpaid'],
@@ -151,10 +197,11 @@ export function DashboardPage() {
   const unpaidSales = unpaidPage?.data ?? []
   const unpaidTotal = unpaidSales.reduce((s, sale) => s + (Number(sale.totalAmount) - Number(sale.paidAmount)), 0)
 
-
-  const chartData = useMemo(() => buildChartData(data?.recentTransactions ?? []), [data])
+  const chartData = useMemo(() => buildMonthlyChartData(data?.monthlyBreakdown ?? []), [data])
   const gridColor = isDark ? '#27272a' : '#e4e4e7'
   const textColor = isDark ? '#71717a' : '#a1a1aa'
+
+  const rotKpis = data?.activeRotationKpis ?? null
 
   /* ─── Empty state ─── */
   if (!businessId) return (
@@ -252,6 +299,16 @@ export function DashboardPage() {
         </section>
       )}
 
+      {/* ── Monthly P&L summary (admin/manager only) ── */}
+      {canSeeMoney && (
+        <MonthPnlBar
+          income={k?.monthIncome ?? 0}
+          expense={k?.monthExpense ?? 0}
+          profit={k?.monthProfit ?? 0}
+          currency={cur}
+        />
+      )}
+
       {/* ── Active Rotation Banner ── */}
       {supportsRotations && activeRotation && (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800 shadow-sm overflow-hidden">
@@ -270,29 +327,72 @@ export function DashboardPage() {
             </Link>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-zinc-100 dark:divide-zinc-800">
-            <div className="px-5 py-3.5">
-              <p className="text-xs text-zinc-400 mb-1">Capital initial</p>
-              <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">{fmt(Number(activeRotation.initialCapital), cur)}</p>
+          {/* Stats — show full P&L if we have rotation KPIs, else fall back to basic */}
+          {canSeeMoney && rotKpis ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-zinc-100 dark:divide-zinc-800">
+              {/* Capital */}
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Capital initial</p>
+                <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">{fmt(rotKpis.initialCapital, cur)}</p>
+              </div>
+              {/* Dépenses */}
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Achats & frais</p>
+                <p className="text-base font-bold text-red-500">−{fmt(rotKpis.totalExpense, cur)}</p>
+              </div>
+              {/* Encaissé */}
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Encaissé</p>
+                <p className="text-base font-bold text-emerald-600">+{fmt(rotKpis.totalRevenue, cur)}</p>
+              </div>
+              {/* Bénéfice net */}
+              <div className={`px-5 py-3.5 ${rotKpis.profit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-red-50 dark:bg-red-950/20'}`}>
+                <p className="text-xs text-zinc-400 mb-1">Bénéfice net</p>
+                <p className={`text-base font-bold ${rotKpis.profit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>
+                  {rotKpis.profit >= 0 ? '+' : ''}{fmt(rotKpis.profit, cur)}
+                </p>
+                {rotKpis.roi !== null && (
+                  <p className={`text-xs mt-0.5 font-medium ${rotKpis.roi >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-500'}`}>
+                    ROI {rotKpis.roi >= 0 ? '+' : ''}{rotKpis.roi}%
+                  </p>
+                )}
+              </div>
+              {/* Durée */}
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Durée</p>
+                <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+                  {daysBetween(activeRotation.startDate)} j
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  depuis le {new Date(activeRotation.startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                </p>
+              </div>
             </div>
-            <div className="px-5 py-3.5">
-              <p className="text-xs text-zinc-400 mb-1">Démarrée le</p>
-              <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">
-                {new Date(activeRotation.startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-              </p>
+          ) : (
+            /* Fallback for non-managers or before data loads */
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-zinc-100 dark:divide-zinc-800">
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Capital initial</p>
+                <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">{fmt(Number(activeRotation.initialCapital), cur)}</p>
+              </div>
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Démarrée le</p>
+                <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+                  {new Date(activeRotation.startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                </p>
+              </div>
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Durée</p>
+                <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+                  {daysBetween(activeRotation.startDate)} jour{daysBetween(activeRotation.startDate) !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div className="px-5 py-3.5">
+                <p className="text-xs text-zinc-400 mb-1">Notes</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{activeRotation.notes || '—'}</p>
+              </div>
             </div>
-            <div className="px-5 py-3.5">
-              <p className="text-xs text-zinc-400 mb-1">Durée</p>
-              <p className="text-base font-bold text-zinc-800 dark:text-zinc-200">
-                {daysBetween(activeRotation.startDate)} jour{daysBetween(activeRotation.startDate) !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <div className="px-5 py-3.5">
-              <p className="text-xs text-zinc-400 mb-1">Notes</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{activeRotation.notes || '—'}</p>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -319,12 +419,6 @@ export function DashboardPage() {
       {canSeeMoney && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
-            title="Balance"
-            value={fmt(k?.balance ?? 0, cur)}
-            color="violet"
-            icon={<Icon name="wallet" size={20} />}
-          />
-          <StatCard
             title="Ventes du jour"
             value={fmt(k?.todaySalesTotal ?? 0, cur)}
             subtitle={`${k?.todaySalesCount ?? 0} vente${(k?.todaySalesCount ?? 0) > 1 ? 's' : ''}`}
@@ -337,6 +431,12 @@ export function DashboardPage() {
             subtitle={`${k?.monthSalesCount ?? 0} ventes`}
             color="blue"
             icon={<Icon name="bar-chart" size={20} />}
+          />
+          <StatCard
+            title="Balance globale"
+            value={fmt(k?.balance ?? 0, cur)}
+            color="violet"
+            icon={<Icon name="wallet" size={20} />}
           />
           <StatCard
             title="Stock bas"
@@ -392,7 +492,7 @@ export function DashboardPage() {
             </div>
 
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {unpaidSales.map(sale => {
+              {unpaidSales.map((sale) => {
                 const remaining = Number(sale.totalAmount) - Number(sale.paidAmount)
                 const paidPct = Number(sale.totalAmount) > 0
                   ? Math.min(100, Math.round((Number(sale.paidAmount) / Number(sale.totalAmount)) * 100))
@@ -468,7 +568,7 @@ export function DashboardPage() {
             </Link>
           </div>
           <div className="divide-y divide-zinc-50 dark:divide-zinc-800/60">
-            {data?.recentSales?.length ? data.recentSales.slice(0, 5).map(s => {
+            {data?.recentSales?.length ? data.recentSales.slice(0, 5).map((s) => {
               const isPaid = s.status === 'completed' || Number(s.paidAmount) >= Number(s.totalAmount)
               return (
                 <div key={s.id} className="flex items-center justify-between px-5 py-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
@@ -517,7 +617,7 @@ export function DashboardPage() {
               </Link>
             </div>
             <div className="divide-y divide-zinc-50 dark:divide-zinc-800/60">
-              {data?.recentTransactions?.length ? data.recentTransactions.slice(0, 5).map(tx => (
+              {data?.recentTransactions?.length ? data.recentTransactions.slice(0, 5).map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between px-5 py-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600' : 'bg-red-50 dark:bg-red-950/30 text-red-500'}`}>
@@ -558,39 +658,67 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* ── Financial chart (admin/manager only) ── */}
+      {/* ── Monthly P&L chart (admin/manager only) ── */}
       {canSeeMoney && chartData.length > 0 && (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Flux financiers récents</h3>
-              <p className="text-xs text-zinc-400 mt-0.5">Revenus vs Dépenses</p>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Résultat mensuel</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">Revenus, dépenses et bénéfice net — 6 derniers mois</p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1 text-zinc-400"><span className="w-2.5 h-2.5 rounded-full bg-emi-violet inline-block" /> Revenus</span>
-              <span className="flex items-center gap-1 text-zinc-400"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> Dépenses</span>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <span className="flex items-center gap-1 text-zinc-400">
+                <span className="w-2.5 h-2.5 rounded-sm bg-emi-violet inline-block" /> Revenus
+              </span>
+              <span className="flex items-center gap-1 text-zinc-400">
+                <span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" /> Dépenses
+              </span>
+              <span className="flex items-center gap-1 text-zinc-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Bénéfice
+              </span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="dashGradRev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="dashGradExp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+          <ResponsiveContainer width="100%" height={220}>
+            <ComposedChart data={chartData} margin={{ top: 8, right: 4, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: textColor, fontSize: 11 }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" tick={{ fill: textColor, fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fill: textColor, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={fmtShort} />
               <Tooltip content={<CustomTooltip currency={cur} />} />
-              <Area type="monotone" dataKey="Revenus" stroke="#7C3AED" strokeWidth={2} fill="url(#dashGradRev)" dot={false} activeDot={{ r: 4, fill: '#7C3AED' }} />
-              <Area type="monotone" dataKey="Dépenses" stroke="#EF4444" strokeWidth={2} fill="url(#dashGradExp)" dot={false} activeDot={{ r: 4, fill: '#EF4444' }} />
-            </AreaChart>
+              {/* Zero reference line so profit sign is instantly visible */}
+              <ReferenceLine y={0} stroke={gridColor} strokeWidth={1.5} />
+              <Bar dataKey="Revenus" fill="#7C3AED" fillOpacity={0.80} radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="Dépenses" fill="#EF4444" fillOpacity={0.75} radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Line
+                type="monotone"
+                dataKey="Bénéfice"
+                stroke="#10B981"
+                strokeWidth={2.5}
+                dot={{ r: 4, fill: '#10B981', strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: '#10B981' }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
+
+          {/* Per-month profit legend below chart */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(data?.monthlyBreakdown ?? []).map((b) => {
+              const isPos = b.profit >= 0
+              const label = new Date(b.month + '-02').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+              return (
+                <div
+                  key={b.month}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+                    isPos
+                      ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 text-red-600'
+                  }`}
+                >
+                  <span className="text-zinc-500 dark:text-zinc-400 font-normal capitalize">{label}</span>
+                  <span>{isPos ? '+' : ''}{fmtShort(b.profit)}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
