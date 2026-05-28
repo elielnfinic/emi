@@ -55,6 +55,54 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['show']>>>
     }
   }
+  'profile.profile.update_profile': {
+    methods: ["PUT"]
+    pattern: '/api/v1/account/profile'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updateProfile']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updateProfile']>>>
+    }
+  }
+  'profile.profile.update_password': {
+    methods: ["PUT"]
+    pattern: '/api/v1/account/password'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updatePassword']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['updatePassword']>>>
+    }
+  }
+  'profile.profile.request_email_change': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/email/request'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['requestEmailChange']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['requestEmailChange']>>>
+    }
+  }
+  'profile.profile.verify_email_change': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/email/verify'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['verifyEmailChange']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['verifyEmailChange']>>>
+    }
+  }
   'dashboard.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/dashboard'
@@ -65,66 +113,6 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['show']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/dashboard_controller').default['show']>>>
-    }
-  }
-  'organizations.index': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/organizations'
-    types: {
-      body: {}
-      paramsTuple: []
-      params: {}
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['index']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['index']>>>
-    }
-  }
-  'organizations.store': {
-    methods: ["POST"]
-    pattern: '/api/v1/organizations'
-    types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
-      paramsTuple: []
-      params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/organization').createOrganizationValidator)>|InferInput<(typeof import('#validators/organization').createOrganizationValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
-    }
-  }
-  'organizations.show': {
-    methods: ["GET","HEAD"]
-    pattern: '/api/v1/organizations/:id'
-    types: {
-      body: {}
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['show']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['show']>>>
-    }
-  }
-  'organizations.update': {
-    methods: ["PUT"]
-    pattern: '/api/v1/organizations/:id'
-    types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/organization').updateOrganizationValidator)>>
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: ExtractQuery<InferInput<(typeof import('#validators/organization').updateOrganizationValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['update']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
-    }
-  }
-  'organizations.destroy': {
-    methods: ["DELETE"]
-    pattern: '/api/v1/organizations/:id'
-    types: {
-      body: {}
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['destroy']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/organizations_controller').default['destroy']>>>
     }
   }
   'businesses.index': {
@@ -187,6 +175,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/businesses_controller').default['destroy']>>>
     }
   }
+  'transactions.beneficiaries': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/transactions/beneficiaries'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/transactions_controller').default['beneficiaries']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/transactions_controller').default['beneficiaries']>>>
+    }
+  }
   'transactions.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/transactions'
@@ -247,6 +247,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/transactions_controller').default['destroy']>>>
     }
   }
+  'stock_items.categories': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/stock-items/categories'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_items_controller').default['categories']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_items_controller').default['categories']>>>
+    }
+  }
   'stock_items.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/stock-items'
@@ -305,6 +317,78 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_items_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_items_controller').default['destroy']>>>
+    }
+  }
+  'stock_transactions.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/stock-transactions'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['index']>>>
+    }
+  }
+  'stock_transactions.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/stock-transactions'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/stock_transaction').createStockTransactionValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/stock_transaction').createStockTransactionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'stock_transactions.bulk_move_rotation': {
+    methods: ["POST"]
+    pattern: '/api/v1/stock-transactions/bulk-move-rotation'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/stock_transaction').bulkMoveRotationValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/stock_transaction').bulkMoveRotationValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['bulkMoveRotation']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['bulkMoveRotation']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'stock_transactions.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/stock-transactions/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['show']>>>
+    }
+  }
+  'stock_transactions.update': {
+    methods: ["PUT"]
+    pattern: '/api/v1/stock-transactions/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/stock_transaction').updateStockTransactionValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/stock_transaction').updateStockTransactionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'stock_transactions.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/stock-transactions/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/stock_transactions_controller').default['destroy']>>>
     }
   }
   'customers.index': {
@@ -665,6 +749,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['stockReport']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/reports_controller').default['stockReport']>>>
+    }
+  }
+  'profile.admin_update_user': {
+    methods: ["PUT"]
+    pattern: '/api/v1/admin/users/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['adminUpdateUser']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/profile_controller').default['adminUpdateUser']>>>
     }
   }
 }

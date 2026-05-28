@@ -1,9 +1,12 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+// When VITE_API_URL is set (e.g. production) use it directly.
+// Otherwise use a relative path — Vite's proxy forwards /api → localhost:3333,
+// which means any device on the LAN only needs to reach port 5173.
+const API_URL = import.meta.env.VITE_API_URL ?? ''
 
 const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

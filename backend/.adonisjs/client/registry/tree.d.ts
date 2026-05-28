@@ -14,17 +14,15 @@ export interface ApiDefinition {
   profile: {
     profile: {
       show: typeof routes['profile.profile.show']
+      updateProfile: typeof routes['profile.profile.update_profile']
+      updatePassword: typeof routes['profile.profile.update_password']
+      requestEmailChange: typeof routes['profile.profile.request_email_change']
+      verifyEmailChange: typeof routes['profile.profile.verify_email_change']
     }
+    adminUpdateUser: typeof routes['profile.admin_update_user']
   }
   dashboard: {
     show: typeof routes['dashboard.show']
-  }
-  organizations: {
-    index: typeof routes['organizations.index']
-    store: typeof routes['organizations.store']
-    show: typeof routes['organizations.show']
-    update: typeof routes['organizations.update']
-    destroy: typeof routes['organizations.destroy']
   }
   businesses: {
     index: typeof routes['businesses.index']
@@ -34,6 +32,7 @@ export interface ApiDefinition {
     destroy: typeof routes['businesses.destroy']
   }
   transactions: {
+    beneficiaries: typeof routes['transactions.beneficiaries']
     index: typeof routes['transactions.index']
     store: typeof routes['transactions.store']
     show: typeof routes['transactions.show']
@@ -41,11 +40,20 @@ export interface ApiDefinition {
     destroy: typeof routes['transactions.destroy']
   }
   stockItems: {
+    categories: typeof routes['stock_items.categories']
     index: typeof routes['stock_items.index']
     store: typeof routes['stock_items.store']
     show: typeof routes['stock_items.show']
     update: typeof routes['stock_items.update']
     destroy: typeof routes['stock_items.destroy']
+  }
+  stockTransactions: {
+    index: typeof routes['stock_transactions.index']
+    store: typeof routes['stock_transactions.store']
+    bulkMoveRotation: typeof routes['stock_transactions.bulk_move_rotation']
+    show: typeof routes['stock_transactions.show']
+    update: typeof routes['stock_transactions.update']
+    destroy: typeof routes['stock_transactions.destroy']
   }
   customers: {
     index: typeof routes['customers.index']

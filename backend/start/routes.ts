@@ -11,10 +11,10 @@ import { middleware } from '#start/kernel'
 import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
 
-const OrganizationsController = () => import('#controllers/organizations_controller')
 const BusinessesController = () => import('#controllers/businesses_controller')
 const TransactionsController = () => import('#controllers/transactions_controller')
 const StockItemsController = () => import('#controllers/stock_items_controller')
+const StockTransactionsController = () => import('#controllers/stock_transactions_controller')
 const CustomersController = () => import('#controllers/customers_controller')
 const SuppliersController = () => import('#controllers/suppliers_controller')
 const SalesController = () => import('#controllers/sales_controller')
@@ -44,6 +44,10 @@ router
     router
       .group(() => {
         router.get('/profile', [controllers.Profile, 'show'])
+        router.put('/profile', [controllers.Profile, 'updateProfile'])
+        router.put('/password', [controllers.Profile, 'updatePassword'])
+        router.post('/email/request', [controllers.Profile, 'requestEmailChange'])
+        router.post('/email/verify', [controllers.Profile, 'verifyEmailChange'])
       })
       .prefix('account')
       .as('profile')
@@ -55,13 +59,6 @@ router
         // Dashboard
         router.get('dashboard', [DashboardController, 'show'])
 
-        // Organizations CRUD
-        router.get('organizations', [OrganizationsController, 'index'])
-        router.post('organizations', [OrganizationsController, 'store'])
-        router.get('organizations/:id', [OrganizationsController, 'show'])
-        router.put('organizations/:id', [OrganizationsController, 'update'])
-        router.delete('organizations/:id', [OrganizationsController, 'destroy'])
-
         // Businesses CRUD
         router.get('businesses', [BusinessesController, 'index'])
         router.post('businesses', [BusinessesController, 'store'])
@@ -70,6 +67,7 @@ router
         router.delete('businesses/:id', [BusinessesController, 'destroy'])
 
         // Transactions CRUD
+        router.get('transactions/beneficiaries', [TransactionsController, 'beneficiaries'])
         router.get('transactions', [TransactionsController, 'index'])
         router.post('transactions', [TransactionsController, 'store'])
         router.get('transactions/:id', [TransactionsController, 'show'])
@@ -77,11 +75,20 @@ router
         router.delete('transactions/:id', [TransactionsController, 'destroy'])
 
         // Stock Items CRUD
+        router.get('stock-items/categories', [StockItemsController, 'categories'])
         router.get('stock-items', [StockItemsController, 'index'])
         router.post('stock-items', [StockItemsController, 'store'])
         router.get('stock-items/:id', [StockItemsController, 'show'])
         router.put('stock-items/:id', [StockItemsController, 'update'])
         router.delete('stock-items/:id', [StockItemsController, 'destroy'])
+
+        // Stock Transactions CRUD
+        router.get('stock-transactions', [StockTransactionsController, 'index'])
+        router.post('stock-transactions', [StockTransactionsController, 'store'])
+        router.post('stock-transactions/bulk-move-rotation', [StockTransactionsController, 'bulkMoveRotation'])
+        router.get('stock-transactions/:id', [StockTransactionsController, 'show'])
+        router.put('stock-transactions/:id', [StockTransactionsController, 'update'])
+        router.delete('stock-transactions/:id', [StockTransactionsController, 'destroy'])
 
         // Customers CRUD
         router.get('customers', [CustomersController, 'index'])
@@ -126,6 +133,9 @@ router
         router.get('reports/sales', [ReportsController, 'salesReport'])
         router.get('reports/transactions', [ReportsController, 'transactionsReport'])
         router.get('reports/stock', [ReportsController, 'stockReport'])
+
+        // Admin
+        router.put('admin/users/:id', [controllers.Profile, 'adminUpdateUser'])
       })
       .use(middleware.auth())
   })

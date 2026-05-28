@@ -1,30 +1,48 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Loader } from '../components/ui/Loader'
 import { Icon } from '../components/ui/Icon'
+import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
 import { useAppStore } from '../stores'
 import api from '../services/api'
 import type { Customer, PaginatedResponse } from '../types'
+
+function getInitials(name: string) {
+  return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+const AVATAR_COLORS = [
+  'from-violet-500 to-purple-600',
+  'from-emerald-500 to-teal-600',
+  'from-blue-500 to-indigo-600',
+  'from-amber-500 to-orange-600',
+  'from-rose-500 to-pink-600',
+  'from-cyan-500 to-sky-600',
+]
+function avatarColor(id: number) { return AVATAR_COLORS[id % AVATAR_COLORS.length] }
 
 export function CustomersPage() {
   const { currentBusiness } = useAppStore()
   const bid = currentBusiness?.id
   const queryClient = useQueryClient()
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
+  const [name, setName]       = useState('')
+  const [email, setEmail]     = useState('')
+  const [phone, setPhone]     = useState('')
   const [address, setAddress] = useState('')
-  const [notes, setNotes] = useState('')
+  const [notes, setNotes]     = useState('')
 
   const [searchParams, setSearchParams] = useSearchParams()
   const search = searchParams.get('search') ?? ''
-  const page = Number(searchParams.get('page') ?? '1')
+  const page   = Number(searchParams.get('page') ?? '1')
   const [inputValue, setInputValue] = useState(search)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setInputValue(search) }, [search])
 
@@ -35,11 +53,13 @@ export function CustomersPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => api.post('/customers', payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers', bid] })
-      resetForm()
-    },
+    mutationFn: (p: Record<string, unknown>) => api.post('/customers', p),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers', bid] }); resetForm(); setShowModal(false) },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...p }: Record<string, unknown>) => api.put(`/customers/${id}`, p),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers', bid] }); setEditCustomer(null) },
   })
 
   const deleteMutation = useMutation({
@@ -47,135 +67,182 @@ export function CustomersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers', bid] }),
   })
 
-  const resetForm = () => {
-    setName('')
-    setEmail('')
-    setPhone('')
-    setAddress('')
-    setNotes('')
+  const resetForm = () => { setName(''); setEmail(''); setPhone(''); setAddress(''); setNotes('') }
+
+  const openCreate = () => { resetForm(); setShowModal(true) }
+  const openEdit   = (c: Customer) => {
+    setEditCustomer(c)
+    setName(c.name); setEmail(c.email || ''); setPhone(c.phone || '')
+    setAddress(c.address || ''); setNotes(c.notes || '')
   }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    createMutation.mutate({
-      businessId: bid,
-      name,
-      email: email || undefined,
-      phone: phone || undefined,
-      address: address || undefined,
-      notes: notes || undefined,
-    })
+    const payload = { businessId: bid, name, email: email || undefined, phone: phone || undefined, address: address || undefined, notes: notes || undefined }
+    editCustomer ? updateMutation.mutate({ id: editCustomer.id, ...payload }) : createMutation.mutate(payload)
   }
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Delete this customer?')) deleteMutation.mutate(id)
+  const applySearch = (e?: FormEvent) => {
+    e?.preventDefault()
+    setSearchParams(prev => { const n = new URLSearchParams(prev); inputValue.trim() ? n.set('search', inputValue.trim()) : n.delete('search'); n.set('page', '1'); return n })
   }
 
-  const applySearch = (e: FormEvent) => {
-    e.preventDefault()
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      if (inputValue.trim()) next.set('search', inputValue.trim())
-      else next.delete('search')
-      next.set('page', '1')
-      return next
-    })
+  const clearSearch = () => {
+    setInputValue('')
+    setSearchParams(prev => { const n = new URLSearchParams(prev); n.delete('search'); n.set('page', '1'); return n })
+    searchRef.current?.focus()
   }
 
-  const handlePageChange = (p: number) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.set('page', String(p))
-      return next
-    })
-  }
+  const handlePageChange = (p: number) =>
+    setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n })
 
   if (!bid) return (
-    <div className="text-center py-16">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emi-green-light text-emi-green mb-4">
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-5">
         <Icon name="customers" size={28} />
       </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">No business selected</h2>
-      <p className="text-gray-500">Select a business to manage customers.</p>
+      <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Aucun business sélectionné</h2>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">Sélectionnez un business pour gérer vos clients.</p>
     </div>
   )
   if (isLoading) return <Loader />
 
-  const customers = data?.data ?? []
-  const meta = data?.meta
+  const customers  = data?.data ?? []
+  const meta       = data?.meta
+  const totalCount = meta?.total ?? customers.length
+  const isPending  = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Customer</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Customer name" />
-              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
-              <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 234 567 890" />
-              <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, City, Country" />
-              <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
-              <Button type="submit" className="w-full" loading={createMutation.isPending}>Add Customer</Button>
-            </form>
-          </div>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Clients</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {currentBusiness?.name} · {totalCount} client{totalCount !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <form onSubmit={applySearch} className="flex gap-2">
-                <Input
-                  placeholder="Search by name, email or phone…"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                />
-                <Button type="submit" variant="secondary">Search</Button>
-              </form>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {customers.length ? customers.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        <Link to={`/customers/${c.id}`} className="text-emi-violet hover:underline">{c.name}</Link>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500">{c.email || '-'}</td>
-                      <td className="px-6 py-4 text-gray-500">{c.phone || '-'}</td>
-                      <td className="px-6 py-4 text-gray-500">{c.address || '-'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>Delete</Button>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emi-green-light text-emi-green mb-2">
-                          <Icon name="customers" size={24} />
-                        </div>
-                        <p className="text-gray-500">{search ? 'No customers match your search.' : 'No customers yet. Add your first customer.'}</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
-          </div>
-        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Icon name="plus" size={15} className="mr-1" /> Nouveau client
+        </Button>
       </div>
+
+      {/* Search */}
+      <form onSubmit={applySearch} className="relative">
+        <Icon name="search" size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+        <input
+          ref={searchRef}
+          type="text"
+          placeholder="Rechercher par nom, email ou téléphone…"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && applySearch()}
+          className="w-full pl-9 pr-8 py-2.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-emi-violet focus:ring-2 focus:ring-emi-violet/20 shadow-sm transition"
+        />
+        {inputValue && (
+          <button type="button" onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
+            <Icon name="x" size={14} />
+          </button>
+        )}
+      </form>
+
+      {/* List */}
+      {customers.length ? (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
+          {customers.map(c => (
+            <div key={c.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors group">
+              {/* Avatar */}
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColor(c.id)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                {getInitials(c.name)}
+              </div>
+
+              {/* Name + contact */}
+              <div className="flex-1 min-w-0">
+                <Link
+                  to={`/customers/${c.id}`}
+                  className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:text-emi-violet transition-colors truncate block"
+                >
+                  {c.name}
+                </Link>
+                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  {c.email && <span className="text-xs text-zinc-400 truncate">{c.email}</span>}
+                  {c.phone && (
+                    <span className="text-xs text-zinc-400 flex items-center gap-1">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.11 2 2 0 012 .01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.76a16 16 0 006.94 6.94l1.41-1.41a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                      </svg>
+                      {c.phone}
+                    </span>
+                  )}
+                  {c.address && (
+                    <span className="text-xs text-zinc-400 truncate max-w-[160px]">{c.address}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Link
+                  to={`/customers/${c.id}`}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-emi-violet hover:bg-emi-violet/10 transition-colors"
+                  title="Voir les détails"
+                >
+                  <Icon name="chevron-right" size={15} />
+                </Link>
+                <button
+                  onClick={() => openEdit(c)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-emi-violet hover:bg-emi-violet/10 transition-colors"
+                  title="Modifier"
+                >
+                  <Icon name="edit" size={14} />
+                </button>
+                <button
+                  onClick={() => { if (window.confirm('Supprimer ce client ?')) deleteMutation.mutate(c.id) }}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  title="Supprimer"
+                >
+                  <Icon name="trash" size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 py-16 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 text-emi-green mb-4">
+            <Icon name="customers" size={26} />
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {search ? 'Aucun client ne correspond à votre recherche.' : 'Aucun client pour l\'instant.'}
+          </p>
+          {!search && (
+            <button onClick={openCreate} className="mt-3 text-sm text-emi-violet hover:underline">
+              + Ajouter un client
+            </button>
+          )}
+        </div>
+      )}
+
+      {meta && <Pagination meta={meta} onPageChange={handlePageChange} />}
+
+      {/* Modal */}
+      <Modal
+        isOpen={showModal || !!editCustomer}
+        onClose={() => { setShowModal(false); setEditCustomer(null); resetForm() }}
+        title={editCustomer ? 'Modifier le client' : 'Nouveau client'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Input label="Nom *" value={name} onChange={e => setName(e.target.value)} required placeholder="Nom complet" />
+          <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemple.com" />
+          <Input label="Téléphone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+XXX XX XX XX XX" />
+          <Input label="Adresse" value={address} onChange={e => setAddress(e.target.value)} placeholder="Rue, Ville, Pays" />
+          <Input label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optionnel" />
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => { setShowModal(false); setEditCustomer(null); resetForm() }} className="flex-1">Annuler</Button>
+            <Button type="submit" className="flex-1" loading={isPending}>{editCustomer ? 'Enregistrer' : 'Créer'}</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

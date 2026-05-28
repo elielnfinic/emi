@@ -1,3 +1,12 @@
+export interface Organization {
+  id: number
+  name: string
+  slug: string
+  logoUrl: string | null
+  createdAt: string
+  updatedAt: string | null
+}
+
 export interface Role {
   id: number
   name: string
@@ -9,8 +18,8 @@ export interface User {
   id: number
   fullName: string | null
   email: string
+  phone?: string | null
   initials: string
-  organizationId: number | null
   roleId: number | null
   role?: string | null
   businessRoles?: Record<number, string>
@@ -18,18 +27,8 @@ export interface User {
   updatedAt: string | null
 }
 
-export interface Organization {
-  id: number
-  name: string
-  slug: string
-  logoUrl: string | null
-  createdAt: string
-  updatedAt: string | null
-}
-
 export interface Business {
   id: number
-  organizationId: number
   name: string
   slug: string
   type: string
@@ -38,7 +37,6 @@ export interface Business {
   address: string | null
   phone: string | null
   isActive: boolean
-  organization?: Organization
   createdAt: string
   updatedAt: string | null
 }
@@ -76,11 +74,33 @@ export interface StockItem {
   sku: string | null
   description: string | null
   unit: string
+  category: string | null
   purchasePrice: number | null
   sellingPrice: number | null
   quantity: number
   minQuantity: number
   isActive: boolean
+  movements?: StockTransaction[]
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface StockTransaction {
+  id: number
+  stockItemId: number
+  businessId: number
+  userId: number
+  type: 'in' | 'out' | 'adjustment'
+  quantity: number
+  unitPrice: number | null
+  reason: string | null
+  reference: string | null
+  date: string
+  notes: string | null
+  rotationId: number | null
+  supplierId: number | null
+  stockItem?: StockItem
+  user?: User
   createdAt: string
   updatedAt: string | null
 }
@@ -149,6 +169,23 @@ export interface Sale {
   updatedAt: string | null
 }
 
+export interface MonthlyBreakdown {
+  month: string
+  income: number
+  expense: number
+  profit: number
+}
+
+export interface ActiveRotationKpis {
+  rotationId: number
+  rotationName: string
+  initialCapital: number
+  totalExpense: number
+  totalRevenue: number
+  profit: number
+  roi: number | null
+}
+
 export interface DashboardData {
   kpis: {
     totalIncome: number
@@ -160,7 +197,12 @@ export interface DashboardData {
     monthSalesCount: number
     lowStockCount: number
     totalCustomers: number
+    monthIncome: number
+    monthExpense: number
+    monthProfit: number
   }
+  activeRotationKpis: ActiveRotationKpis | null
+  monthlyBreakdown: MonthlyBreakdown[]
   recentTransactions: Transaction[]
   recentSales: Sale[]
 }
@@ -179,6 +221,11 @@ export interface Rotation {
   business?: Business
   createdAt: string
   updatedAt: string | null
+}
+
+export interface RotationDetail extends Rotation {
+  transactions: Transaction[]
+  sales: Sale[]
 }
 
 export interface BusinessUser {

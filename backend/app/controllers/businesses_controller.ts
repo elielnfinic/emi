@@ -1,28 +1,20 @@
 import Business from '#models/business'
 import { createBusinessValidator, updateBusinessValidator } from '#validators/business'
-import { getUserOrganizationId, verifyBusinessAccess, isOrgAdmin, isSuperAdmin } from '#services/authorization'
+import { verifyBusinessAccess, isSuperAdmin, getUserBusinessIds, isBusinessAdmin } from '#services/authorization'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class BusinessesController {
-  async index({ request, auth }: HttpContext) {
+  async index({ auth }: HttpContext) {
     const user = auth.getUserOrFail()
-    const organizationId = request.input('organization_id')
 
     if (await isSuperAdmin(user.id)) {
-      const query = Business.query().preload('organization').orderBy('name', 'asc')
-      if (organizationId) query.where('organizationId', organizationId)
-      return query
+      return Business.query().orderBy('name', 'asc')
     }
 
-    const orgId = organizationId || (await getUserOrganizationId(user.id))
-    if (!orgId) return []
-
-    // Only return businesses in the user's organization
-    const businesses = await Business.query()
-      .where('organizationId', orgId)
-      .preload('organization')
-      .orderBy('name', 'asc')
-    return businesses
+    // Return only businesses the user is assigned to
+    const businessIds = await getUserBusinessIds(user.id)
+    if (!businessIds.length) return []
+    return Business.query().whereIn('id', businessIds).orderBy('name', 'asc')
   }
 
   async store(ctx: HttpContext) {
@@ -33,20 +25,9 @@ export default class BusinessesController {
     const superAdmin = await isSuperAdmin(user.id)
 
     if (!superAdmin) {
-      // Verify the business is being created in user's org
-      const orgId = await getUserOrganizationId(user.id)
-      if (orgId && data.organizationId !== orgId) {
-        return response.forbidden({ error: 'You can only create businesses in your organization' })
-      }
-
-      // Only admins can create businesses
-      if (orgId) {
-        const admin = await isOrgAdmin(user.id, orgId)
-        if (!admin) {
-          return response.forbidden({ error: 'Only admins can create new businesses' })
-        }
-      } else {
-        return response.forbidden({ error: 'You must be assigned to an organization to create businesses' })
+      const admin = await isBusinessAdmin(user.id)
+      if (!admin) {
+        return response.forbidden({ error: 'Only admins can create new businesses' })
       }
     }
 
@@ -58,10 +39,18 @@ export default class BusinessesController {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '')
     }
-    const business = await Business.create(data)
-    await business.load('organization')
 
-    // Auto-assign creator as admin if not already in the business
+    const business = await Business.create({
+      name: data.name,
+      slug: data.slug,
+      type: data.type,
+      supportsRotations: data.type === 'rotation' ? true : (data.supportsRotations ?? false),
+      currency: data.currency,
+      address: data.address,
+      phone: data.phone,
+    })
+
+    // Auto-assign creator as admin
     const { default: BusinessUser } = await import('#models/business_user')
     const existing = await BusinessUser.query()
       .where('businessId', business.id)
@@ -81,10 +70,7 @@ export default class BusinessesController {
 
   async show(ctx: HttpContext) {
     const { params } = ctx
-    const business = await Business.query()
-      .where('id', params.id)
-      .preload('organization')
-      .firstOrFail()
+    const business = await Business.findOrFail(params.id)
     await verifyBusinessAccess(ctx, business.id)
     return business
   }
@@ -95,8 +81,11 @@ export default class BusinessesController {
     await verifyBusinessAccess(ctx, business.id, ['admin'])
     const data = await request.validateUsing(updateBusinessValidator)
     business.merge(data)
+    // Keep supportsRotations in sync with type
+    if (data.type !== undefined) {
+      business.supportsRotations = data.type === 'rotation'
+    }
     await business.save()
-    await business.load('organization')
     return business
   }
 

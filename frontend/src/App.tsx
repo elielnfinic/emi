@@ -7,15 +7,18 @@ import { DashboardPage } from './pages/DashboardPage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { SalesPage } from './pages/SalesPage'
 import { StockPage } from './pages/StockPage'
+import { ProductDetailPage } from './pages/ProductDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { SuppliersPage } from './pages/SuppliersPage'
 import { SupplierDetailPage } from './pages/SupplierDetailPage'
 import { BusinessesPage } from './pages/BusinessesPage'
 import { RotationsPage } from './pages/RotationsPage'
+import { RotationDetailPage } from './pages/RotationDetailPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { UsersPage } from './pages/UsersPage'
 import { UnpaidBillsPage } from './pages/UnpaidBillsPage'
+import { SettingsPage } from './pages/SettingsPage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -46,7 +49,9 @@ export default function App() {
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="sales" element={<SalesPage />} />
             <Route path="rotations" element={<RotationsPage />} />
+            <Route path="rotations/:id" element={<RotationDetailPage />} />
             <Route path="stock" element={<StockPage />} />
+            <Route path="stock/:id" element={<ProductDetailPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
@@ -55,6 +60,7 @@ export default function App() {
             <Route path="businesses" element={<BusinessesPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="unpaid-bills" element={<UnpaidBillsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

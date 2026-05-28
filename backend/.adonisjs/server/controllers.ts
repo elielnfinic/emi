@@ -17,6 +17,7 @@ export const controllers = {
   Rotations: () => import('#controllers/rotations_controller'),
   Sales: () => import('#controllers/sales_controller'),
   StockItems: () => import('#controllers/stock_items_controller'),
+  StockTransactions: () => import('#controllers/stock_transactions_controller'),
   Suppliers: () => import('#controllers/suppliers_controller'),
   Transactions: () => import('#controllers/transactions_controller'),
 }
