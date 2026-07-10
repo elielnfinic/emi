@@ -169,6 +169,68 @@ export interface Sale {
   updatedAt: string | null
 }
 
+export interface RequisitionItem {
+  id: number
+  requisitionId: number
+  stockItemId: number | null
+  name: string
+  quantity: number
+  estimatedUnitPrice: number | null
+  notes: string | null
+  stockItem?: StockItem
+}
+
+export interface Requisition {
+  id: number
+  businessId: number
+  supplierId: number | null
+  userId: number
+  approvedById: number | null
+  reference: string
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'converted'
+  totalAmount: number
+  date: string
+  neededByDate: string | null
+  notes: string | null
+  rejectionReason: string | null
+  supplier?: Supplier
+  user?: User
+  approvedBy?: User
+  items?: RequisitionItem[]
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface ProformaItem {
+  id: number
+  proformaId: number
+  stockItemId: number | null
+  name: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+}
+
+export interface Proforma {
+  id: number
+  businessId: number
+  customerId: number | null
+  userId: number
+  reference: string
+  status: 'draft' | 'sent' | 'accepted' | 'converted'
+  totalAmount: number
+  date: string
+  validUntil: string | null
+  notes: string | null
+  saleId: number | null
+  sentAt: string | null
+  customer?: Customer
+  user?: User
+  items?: ProformaItem[]
+  createdAt: string
+  updatedAt: string | null
+}
+
 export interface MonthlyBreakdown {
   month: string
   income: number

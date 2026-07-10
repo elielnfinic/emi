@@ -8,6 +8,8 @@ import Customer from '#models/customer'
 import Supplier from '#models/supplier'
 import Sale from '#models/sale'
 import Rotation from '#models/rotation'
+import Requisition from '#models/requisition'
+import Proforma from '#models/proforma'
 
 export default class Business extends BaseModel {
   @column({ isPrimary: true })
@@ -63,4 +65,10 @@ export default class Business extends BaseModel {
 
   @hasMany(() => Rotation)
   declare rotations: HasMany<typeof Rotation>
+
+  @hasMany(() => Requisition)
+  declare requisitions: HasMany<typeof Requisition>
+
+  @hasMany(() => Proforma)
+  declare proformas: HasMany<typeof Proforma>
 }

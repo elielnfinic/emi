@@ -101,6 +101,122 @@ export class CustomerSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class ProformaItemSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'name', 'proformaId', 'quantity', 'stockItemId', 'totalPrice', 'unitPrice', 'updatedAt'] as const
+  $columns = ProformaItemSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column()
+  declare proformaId: number
+  @column()
+  declare quantity: string
+  @column()
+  declare stockItemId: number | null
+  @column()
+  declare totalPrice: string
+  @column()
+  declare unitPrice: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class ProformaSchema extends BaseModel {
+  static $columns = ['businessId', 'createdAt', 'customerId', 'date', 'id', 'notes', 'reference', 'rotationId', 'saleId', 'sentAt', 'status', 'totalAmount', 'updatedAt', 'userId', 'validUntil'] as const
+  $columns = ProformaSchema.$columns
+  @column()
+  declare businessId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare customerId: number | null
+  @column.date()
+  declare date: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare notes: string | null
+  @column()
+  declare reference: string
+  @column()
+  declare rotationId: number | null
+  @column()
+  declare saleId: number | null
+  @column.dateTime()
+  declare sentAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare totalAmount: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: number
+  @column.date()
+  declare validUntil: DateTime | null
+}
+
+export class RequisitionItemSchema extends BaseModel {
+  static $columns = ['createdAt', 'estimatedUnitPrice', 'id', 'name', 'notes', 'quantity', 'requisitionId', 'stockItemId', 'updatedAt'] as const
+  $columns = RequisitionItemSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare estimatedUnitPrice: string | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare requisitionId: number
+  @column()
+  declare stockItemId: number | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class RequisitionSchema extends BaseModel {
+  static $columns = ['approvedById', 'businessId', 'createdAt', 'date', 'id', 'neededByDate', 'notes', 'reference', 'rejectionReason', 'rotationId', 'status', 'supplierId', 'totalAmount', 'updatedAt', 'userId'] as const
+  $columns = RequisitionSchema.$columns
+  @column()
+  declare approvedById: number | null
+  @column()
+  declare businessId: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.date()
+  declare date: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column.date()
+  declare neededByDate: DateTime | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare reference: string
+  @column()
+  declare rejectionReason: string | null
+  @column()
+  declare rotationId: number | null
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: number | null
+  @column()
+  declare totalAmount: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: number
+}
+
 export class RoleSchema extends BaseModel {
   static $columns = ['createdAt', 'description', 'displayName', 'id', 'name', 'updatedAt'] as const
   $columns = RoleSchema.$columns

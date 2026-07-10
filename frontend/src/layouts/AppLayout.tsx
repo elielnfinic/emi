@@ -89,6 +89,8 @@ export function AppLayout() {
       { to: '/stock',       label: 'Inventaire',  icon: 'stock',        roles: ['admin','manager','stock'] },
       { to: '/customers',   label: 'Clients',     icon: 'customers',    roles: ['admin','manager','cashier'] },
       { to: '/suppliers',   label: 'Fournisseurs',icon: 'suppliers',    roles: ['admin','manager'] },
+      { to: '/requisitions',label: 'Réquisitions',icon: 'requisitions', roles: ['admin','manager','stock'] },
+      { to: '/proformas',   label: 'Proformas',   icon: 'proformas',    roles: ['admin','manager','cashier'] },
     ]
     if (!currentRole) return []
     return items.filter((i) => i.roles.includes(currentRole))

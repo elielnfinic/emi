@@ -69,12 +69,34 @@ export interface ApiDefinition {
     update: typeof routes['suppliers.update']
     destroy: typeof routes['suppliers.destroy']
   }
+  requisitions: {
+    index: typeof routes['requisitions.index']
+    store: typeof routes['requisitions.store']
+    show: typeof routes['requisitions.show']
+    export: typeof routes['requisitions.export']
+    update: typeof routes['requisitions.update']
+    submit: typeof routes['requisitions.submit']
+    approve: typeof routes['requisitions.approve']
+    reject: typeof routes['requisitions.reject']
+    convert: typeof routes['requisitions.convert']
+    destroy: typeof routes['requisitions.destroy']
+  }
   sales: {
     index: typeof routes['sales.index']
     store: typeof routes['sales.store']
     show: typeof routes['sales.show']
     addPayment: typeof routes['sales.add_payment']
     destroy: typeof routes['sales.destroy']
+  }
+  proformas: {
+    index: typeof routes['proformas.index']
+    store: typeof routes['proformas.store']
+    show: typeof routes['proformas.show']
+    update: typeof routes['proformas.update']
+    export: typeof routes['proformas.export']
+    send: typeof routes['proformas.send']
+    convert: typeof routes['proformas.convert']
+    destroy: typeof routes['proformas.destroy']
   }
   rotations: {
     index: typeof routes['rotations.index']
