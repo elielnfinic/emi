@@ -73,6 +73,7 @@
     "ioredis": "^5.10.1",
     "luxon": "^3.7.2",
     "nodemailer": "^8.0.4",
+    "pdfmake": "^0.3.11",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2"
   },

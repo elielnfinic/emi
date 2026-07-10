@@ -18,6 +18,8 @@ const StockTransactionsController = () => import('#controllers/stock_transaction
 const CustomersController = () => import('#controllers/customers_controller')
 const SuppliersController = () => import('#controllers/suppliers_controller')
 const SalesController = () => import('#controllers/sales_controller')
+const RequisitionsController = () => import('#controllers/requisitions_controller')
+const ProformasController = () => import('#controllers/proformas_controller')
 const DashboardController = () => import('#controllers/dashboard_controller')
 const RotationsController = () => import('#controllers/rotations_controller')
 const BusinessUsersController = () => import('#controllers/business_users_controller')
@@ -104,12 +106,34 @@ router
         router.put('suppliers/:id', [SuppliersController, 'update'])
         router.delete('suppliers/:id', [SuppliersController, 'destroy'])
 
+        // Requisitions CRUD + workflow
+        router.get('requisitions', [RequisitionsController, 'index'])
+        router.post('requisitions', [RequisitionsController, 'store'])
+        router.get('requisitions/:id', [RequisitionsController, 'show'])
+        router.get('requisitions/:id/export', [RequisitionsController, 'export'])
+        router.put('requisitions/:id', [RequisitionsController, 'update'])
+        router.post('requisitions/:id/submit', [RequisitionsController, 'submit'])
+        router.post('requisitions/:id/approve', [RequisitionsController, 'approve'])
+        router.post('requisitions/:id/reject', [RequisitionsController, 'reject'])
+        router.post('requisitions/:id/convert', [RequisitionsController, 'convert'])
+        router.delete('requisitions/:id', [RequisitionsController, 'destroy'])
+
         // Sales CRUD
         router.get('sales', [SalesController, 'index'])
         router.post('sales', [SalesController, 'store'])
         router.get('sales/:id', [SalesController, 'show'])
         router.post('sales/payments', [SalesController, 'addPayment'])
         router.delete('sales/:id', [SalesController, 'destroy'])
+
+        // Proformas CRUD + workflow
+        router.get('proformas', [ProformasController, 'index'])
+        router.post('proformas', [ProformasController, 'store'])
+        router.get('proformas/:id', [ProformasController, 'show'])
+        router.put('proformas/:id', [ProformasController, 'update'])
+        router.get('proformas/:id/export', [ProformasController, 'export'])
+        router.post('proformas/:id/send', [ProformasController, 'send'])
+        router.post('proformas/:id/convert', [ProformasController, 'convert'])
+        router.delete('proformas/:id', [ProformasController, 'destroy'])
 
         // Rotations CRUD
         router.get('rotations', [RotationsController, 'index'])

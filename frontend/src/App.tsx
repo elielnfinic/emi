@@ -12,6 +12,10 @@ import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { SuppliersPage } from './pages/SuppliersPage'
 import { SupplierDetailPage } from './pages/SupplierDetailPage'
+import { RequisitionsPage } from './pages/RequisitionsPage'
+import { RequisitionDetailPage } from './pages/RequisitionDetailPage'
+import { ProformasPage } from './pages/ProformasPage'
+import { ProformaDetailPage } from './pages/ProformaDetailPage'
 import { BusinessesPage } from './pages/BusinessesPage'
 import { RotationsPage } from './pages/RotationsPage'
 import { RotationDetailPage } from './pages/RotationDetailPage'
@@ -56,6 +60,10 @@ export default function App() {
             <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="suppliers/:id" element={<SupplierDetailPage />} />
+            <Route path="requisitions" element={<RequisitionsPage />} />
+            <Route path="requisitions/:id" element={<RequisitionDetailPage />} />
+            <Route path="proformas" element={<ProformasPage />} />
+            <Route path="proformas/:id" element={<ProformaDetailPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="businesses" element={<BusinessesPage />} />
             <Route path="users" element={<UsersPage />} />

@@ -46,11 +46,29 @@ export type ScannedRoutes = {
     'suppliers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.store': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.export': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.convert': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales.index': { paramsTuple?: []; params?: {} }
     'sales.store': { paramsTuple?: []; params?: {} }
     'sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales.add_payment': { paramsTuple?: []; params?: {} }
     'sales.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.index': { paramsTuple?: []; params?: {} }
+    'proformas.store': { paramsTuple?: []; params?: {} }
+    'proformas.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.export': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.send': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.convert': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.index': { paramsTuple?: []; params?: {} }
     'rotations.store': { paramsTuple?: []; params?: {} }
     'rotations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -85,8 +103,14 @@ export type ScannedRoutes = {
     'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.index': { paramsTuple?: []; params?: {} }
     'suppliers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.export': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales.index': { paramsTuple?: []; params?: {} }
     'sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.index': { paramsTuple?: []; params?: {} }
+    'proformas.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.export': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.index': { paramsTuple?: []; params?: {} }
     'rotations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'roles.index': { paramsTuple?: []; params?: {} }
@@ -113,8 +137,14 @@ export type ScannedRoutes = {
     'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.index': { paramsTuple?: []; params?: {} }
     'suppliers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.export': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales.index': { paramsTuple?: []; params?: {} }
     'sales.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.index': { paramsTuple?: []; params?: {} }
+    'proformas.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.export': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.index': { paramsTuple?: []; params?: {} }
     'rotations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'roles.index': { paramsTuple?: []; params?: {} }
@@ -137,8 +167,16 @@ export type ScannedRoutes = {
     'stock_transactions.bulk_move_rotation': { paramsTuple?: []; params?: {} }
     'customers.store': { paramsTuple?: []; params?: {} }
     'suppliers.store': { paramsTuple?: []; params?: {} }
+    'requisitions.store': { paramsTuple?: []; params?: {} }
+    'requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.convert': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales.store': { paramsTuple?: []; params?: {} }
     'sales.add_payment': { paramsTuple?: []; params?: {} }
+    'proformas.store': { paramsTuple?: []; params?: {} }
+    'proformas.send': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.convert': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.store': { paramsTuple?: []; params?: {} }
     'rotations.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'business_users.store': { paramsTuple?: []; params?: {} }
@@ -153,6 +191,8 @@ export type ScannedRoutes = {
     'stock_transactions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'profile.admin_update_user': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   DELETE: {
@@ -162,7 +202,9 @@ export type ScannedRoutes = {
     'stock_transactions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'proformas.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rotations.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'business_users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

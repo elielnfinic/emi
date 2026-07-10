@@ -511,6 +511,126 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/suppliers_controller').default['destroy']>>>
     }
   }
+  'requisitions.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/requisitions'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['index']>>>
+    }
+  }
+  'requisitions.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/requisitions'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/requisition').createRequisitionValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/requisition').createRequisitionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'requisitions.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/requisitions/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['show']>>>
+    }
+  }
+  'requisitions.export': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/requisitions/:id/export'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['export']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['export']>>>
+    }
+  }
+  'requisitions.update': {
+    methods: ["PUT"]
+    pattern: '/api/v1/requisitions/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/requisition').updateRequisitionValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/requisition').updateRequisitionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'requisitions.submit': {
+    methods: ["POST"]
+    pattern: '/api/v1/requisitions/:id/submit'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['submit']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['submit']>>>
+    }
+  }
+  'requisitions.approve': {
+    methods: ["POST"]
+    pattern: '/api/v1/requisitions/:id/approve'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['approve']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['approve']>>>
+    }
+  }
+  'requisitions.reject': {
+    methods: ["POST"]
+    pattern: '/api/v1/requisitions/:id/reject'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/requisition').rejectRequisitionValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/requisition').rejectRequisitionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['reject']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['reject']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'requisitions.convert': {
+    methods: ["POST"]
+    pattern: '/api/v1/requisitions/:id/convert'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['convert']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['convert']>>>
+    }
+  }
+  'requisitions.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/requisitions/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/requisitions_controller').default['destroy']>>>
+    }
+  }
   'sales.index': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/sales'
@@ -569,6 +689,102 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/sales_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/sales_controller').default['destroy']>>>
+    }
+  }
+  'proformas.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/proformas'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['index']>>>
+    }
+  }
+  'proformas.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/proformas'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/proforma').createProformaValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/proforma').createProformaValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'proformas.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/proformas/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['show']>>>
+    }
+  }
+  'proformas.update': {
+    methods: ["PUT"]
+    pattern: '/api/v1/proformas/:id'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/proforma').updateProformaValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/proforma').updateProformaValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'proformas.export': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/proformas/:id/export'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['export']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['export']>>>
+    }
+  }
+  'proformas.send': {
+    methods: ["POST"]
+    pattern: '/api/v1/proformas/:id/send'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/proforma').sendProformaValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/proforma').sendProformaValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['send']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['send']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'proformas.convert': {
+    methods: ["POST"]
+    pattern: '/api/v1/proformas/:id/convert'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/proforma').convertProformaValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/proforma').convertProformaValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['convert']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['convert']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'proformas.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/proformas/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/proformas_controller').default['destroy']>>>
     }
   }
   'rotations.index': {
