@@ -109,7 +109,13 @@ export default class RequisitionsController {
       .firstOrFail()
     await verifyBusinessAccess(ctx, requisition.businessId)
 
-    const buffer = await buildRequisitionPdf(requisition)
+    const flag = (name: string) => ctx.request.input(name, '1') !== '0'
+    const buffer = await buildRequisitionPdf(requisition, {
+      includeEmail: flag('include_email'),
+      includeName: flag('include_name'),
+      includeSupplier: flag('include_supplier'),
+      includeNeededBy: flag('include_needed_by'),
+    })
 
     ctx.response.header('Content-Type', 'application/pdf')
     ctx.response.header('Content-Disposition', `attachment; filename="${requisition.reference}.pdf"`)

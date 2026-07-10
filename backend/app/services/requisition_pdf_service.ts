@@ -9,11 +9,27 @@ const STATUS_LABEL: Record<string, string> = {
   converted: 'Convertie',
 }
 
+export interface RequisitionPdfOptions {
+  includeEmail?: boolean
+  includeName?: boolean
+  includeSupplier?: boolean
+  includeNeededBy?: boolean
+}
+
 /**
  * Builds a requisition PDF as a Buffer. `requisition` must already be
  * preloaded with `items`, `supplier`, `user`, `approvedBy` and `business`.
  */
-export async function buildRequisitionPdf(requisition: Requisition): Promise<Buffer> {
+export async function buildRequisitionPdf(
+  requisition: Requisition,
+  options: RequisitionPdfOptions = {}
+): Promise<Buffer> {
+  const {
+    includeEmail = true,
+    includeName = true,
+    includeSupplier = true,
+    includeNeededBy = true,
+  } = options
   const currency = requisition.business.currency || 'USD'
 
   const itemRows = requisition.items.map((item) => [
@@ -27,6 +43,30 @@ export async function buildRequisitionPdf(requisition: Requisition): Promise<Buf
   ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const leftLines: any[] = []
+  if (includeSupplier) {
+    if (leftLines.length) leftLines.push('\n')
+    leftLines.push({ text: 'Fournisseur: ', bold: true }, requisition.supplier?.name ?? 'Non spécifié')
+  }
+  if (includeName) {
+    if (leftLines.length) leftLines.push('\n')
+    leftLines.push({ text: 'Demandeur: ', bold: true }, requisition.user?.fullName ?? '—')
+  }
+  if (includeEmail) {
+    if (leftLines.length) leftLines.push('\n')
+    leftLines.push({ text: 'Email: ', bold: true }, requisition.user?.email ?? '—')
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rightLines: any[] = [{ text: 'Date: ', bold: true }, String(requisition.date).slice(0, 10)]
+  if (includeNeededBy && requisition.neededByDate) {
+    rightLines.push(`\nBesoin avant le: ${String(requisition.neededByDate).slice(0, 10)}`)
+  }
+  if (requisition.approvedBy) {
+    rightLines.push(`\nApprouvé par: ${requisition.approvedBy.fullName ?? requisition.approvedBy.email}`)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const docDefinition: Record<string, any> = {
     content: [
       { text: requisition.business.name, style: 'businessName' },
@@ -38,27 +78,12 @@ export async function buildRequisitionPdf(requisition: Requisition): Promise<Buf
         columns: [
           {
             width: '50%',
-            text: [
-              { text: 'Fournisseur: ', bold: true },
-              requisition.supplier?.name ?? 'Non spécifié',
-              '\n',
-              { text: 'Demandeur: ', bold: true },
-              requisition.user?.fullName ?? requisition.user?.email ?? '—',
-            ],
+            text: leftLines.length ? leftLines : '',
           },
           {
             width: '50%',
             alignment: 'right',
-            text: [
-              { text: 'Date: ', bold: true },
-              String(requisition.date).slice(0, 10),
-              requisition.neededByDate
-                ? `\nBesoin avant le: ${String(requisition.neededByDate).slice(0, 10)}`
-                : '',
-              requisition.approvedBy
-                ? `\nApprouvé par: ${requisition.approvedBy.fullName ?? requisition.approvedBy.email}`
-                : '',
-            ],
+            text: rightLines,
           },
         ],
         margin: [0, 16, 0, 16],

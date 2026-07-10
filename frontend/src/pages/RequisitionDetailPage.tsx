@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '../components/ui/Button'
 import { Loader } from '../components/ui/Loader'
 import { Badge } from '../components/ui/Badge'
 import { Icon } from '../components/ui/Icon'
+import { Modal } from '../components/ui/Modal'
 import { useAppStore, useAuthStore } from '../stores'
 import api from '../services/api'
 import type { Requisition } from '../types'
@@ -64,17 +66,38 @@ export function RequisitionDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['requisitions', bid] }); navigate('/requisitions') },
   })
 
+  const [showExportOptions, setShowExportOptions] = useState(false)
+  const [includeEmail, setIncludeEmail] = useState(true)
+  const [includeName, setIncludeName] = useState(true)
+  const [includeSupplier, setIncludeSupplier] = useState(true)
+  const [includeNeededBy, setIncludeNeededBy] = useState(true)
+  const [exporting, setExporting] = useState(false)
+
   const handleExport = async () => {
     if (!r) return
-    const res = await api.get(`/requisitions/${r.id}/export`, { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${r.reference}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    window.URL.revokeObjectURL(url)
+    setExporting(true)
+    try {
+      const res = await api.get(`/requisitions/${r.id}/export`, {
+        responseType: 'blob',
+        params: {
+          include_email: includeEmail ? 1 : 0,
+          include_name: includeName ? 1 : 0,
+          include_supplier: includeSupplier ? 1 : 0,
+          include_needed_by: includeNeededBy ? 1 : 0,
+        },
+      })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${r.reference}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      setShowExportOptions(false)
+    } finally {
+      setExporting(false)
+    }
   }
 
   if (isLoading) return <Loader />
@@ -105,7 +128,7 @@ export function RequisitionDetailPage() {
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{r.supplier?.name || 'Sans fournisseur'}</p>
           </div>
-          <Button size="sm" variant="outline" onClick={handleExport}>
+          <Button size="sm" variant="outline" onClick={() => setShowExportOptions(true)}>
             <Icon name="download" size={13} className="mr-1" /> Exporter en PDF
           </Button>
         </div>
@@ -179,6 +202,34 @@ export function RequisitionDetailPage() {
           <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">{fmt(Number(r.totalAmount), cur)}</span>
         </div>
       </div>
+
+      <Modal isOpen={showExportOptions} onClose={() => setShowExportOptions(false)} title="Exporter en PDF">
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Choisissez les informations à inclure dans le document.</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+              <input type="checkbox" checked={includeEmail} onChange={e => setIncludeEmail(e.target.checked)} className="rounded border-zinc-300 dark:border-zinc-600 text-emi-violet focus:ring-emi-violet/30" />
+              Mon adresse email
+            </label>
+            <label className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+              <input type="checkbox" checked={includeName} onChange={e => setIncludeName(e.target.checked)} className="rounded border-zinc-300 dark:border-zinc-600 text-emi-violet focus:ring-emi-violet/30" />
+              Mon nom
+            </label>
+            <label className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+              <input type="checkbox" checked={includeSupplier} onChange={e => setIncludeSupplier(e.target.checked)} className="rounded border-zinc-300 dark:border-zinc-600 text-emi-violet focus:ring-emi-violet/30" />
+              Nom du fournisseur
+            </label>
+            <label className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+              <input type="checkbox" checked={includeNeededBy} onChange={e => setIncludeNeededBy(e.target.checked)} className="rounded border-zinc-300 dark:border-zinc-600 text-emi-violet focus:ring-emi-violet/30" />
+              Date « besoin avant le »
+            </label>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setShowExportOptions(false)} className="flex-1">Annuler</Button>
+            <Button type="button" onClick={handleExport} loading={exporting} className="flex-1">Télécharger</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
